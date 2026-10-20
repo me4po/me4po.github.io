@@ -1,0 +1,12 @@
+{{ define "main" }}
+<div class="wrap nf">
+  <div class="nf-line"><span class="nf-cmd">{{ site.Params.prompt }}</span>:~$ curl {{ .RelPermalink }}</div>
+  <div class="nf-err">command not found: 404</div>
+  <div class="nf-line">这个路径不存在。试试：</div>
+  <div class="nf-line">
+    <a href="{{ "/" | relURL }}">cd /</a> ·
+    <a href="{{ "/archives/" | relURL }}">ls archives</a> ·
+    <a href="{{ "/about/" | relURL }}">whoami</a>
+  </div>
+</div>
+{{ end }}

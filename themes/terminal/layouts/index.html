@@ -1,0 +1,15 @@
+{{ define "main" }}
+<div class="wrap">
+  <p class="tagline" id="tagline">{{ site.Params.tagline }}</p>
+
+  <div class="section-title">最新文章</div>
+  {{ $posts := where site.RegularPages "Section" "posts" }}
+  {{ range first 10 $posts }}
+    {{ partial "post-card.html" . }}
+  {{ end }}
+
+  {{ if gt (len $posts) 10 }}
+  <p style="margin-top:28px;font-size:14px"><a href="{{ "/archives/" | relURL }}">查看全部 →</a></p>
+  {{ end }}
+</div>
+{{ end }}

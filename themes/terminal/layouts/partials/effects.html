@@ -1,0 +1,35 @@
+<script>
+(function () {
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var mobile = window.innerWidth < 768;
+
+  function typeInto(el, text, speed) {
+    var i = 0;
+    el.textContent = '';
+    (function step() {
+      el.textContent = text.slice(0, ++i);
+      if (i < text.length) setTimeout(step, speed);
+    })();
+  }
+
+  {{ if site.Params.effects.typewriter }}
+  if (!reduce && !mobile) {
+    var tw = document.querySelectorAll('.tw');
+    for (var i = 0; i < tw.length; i++) {
+      typeInto(tw[i], tw[i].getAttribute('data-text') || tw[i].textContent, 45);
+    }
+    var tag = document.getElementById('tagline');
+    if (tag) typeInto(tag, tag.textContent, 28);
+  }
+  {{ end }}
+
+  {{ if site.Params.effects.themeToggle }}
+  var t = document.createElement('button');
+  t.className = 'btn btn-ghost';
+  t.style.cssText = 'position:fixed;right:14px;top:14px;font-size:12px;padding:4px 10px';
+  t.textContent = 'theme';
+  t.onclick = function () { document.body.classList.toggle('light'); };
+  document.body.appendChild(t);
+  {{ end }}
+})();
+</script>

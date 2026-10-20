@@ -1,0 +1,9 @@
+<a class="card" href="{{ .RelPermalink }}">
+  <h2 class="card-title">{{ .Title }}</h2>
+  <div class="card-meta">
+    <span>{{ .Date.Format "2006-01-02" }}</span>
+    <span>{{ .ReadingTime }} min</span>
+    {{ with .Params.tags }}<span>{{ range $i, $t := . }}{{ if $i }} {{ end }}<span class="card-tag">{{ $t }}</span>{{ end }}</span>{{ end }}
+  </div>
+  {{ with .Summary }}<p class="card-summary">{{ . | plainify | truncate 120 }}</p>{{ end }}
+</a>

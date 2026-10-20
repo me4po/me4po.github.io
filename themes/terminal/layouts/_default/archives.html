@@ -1,0 +1,15 @@
+{{ define "main" }}
+<div class="wrap">
+  <div class="section-title">归档</div>
+  {{ $posts := where site.RegularPages "Section" "posts" }}
+  {{ range $posts.GroupByDate "2006" }}
+    <div class="arch-year">{{ .Key }}</div>
+    {{ range .Pages }}
+      <a class="arch-item" href="{{ .RelPermalink }}">
+        <span class="arch-date">{{ .Date.Format "2006-01-02" }}</span>
+        <span>{{ .Title }}</span>
+      </a>
+    {{ end }}
+  {{ end }}
+</div>
+{{ end }}

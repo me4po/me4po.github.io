@@ -1,0 +1,44 @@
+<div class="cmdbar" id="cmdbar"><input id="cmdinput" placeholder="输入命令，help 查看" autocomplete="off"></div>
+<div class="cmdbar-hint">按 : 唤出命令</div>
+<script>
+(function () {
+  var bar = document.getElementById('cmdbar');
+  var input = document.getElementById('cmdinput');
+  function exec(v) {
+    var parts = v.split(/\s+/);
+    var cmd = parts[0];
+    if (cmd === 'help') {
+      alert('可用命令：\nhelp / whoami / ls / goto <home|archives|tags|about> / theme');
+    } else if (cmd === 'whoami') {
+      window.location.href = '/about/';
+    } else if (cmd === 'ls') {
+      window.location.href = '/archives/';
+    } else if (cmd === 'goto') {
+      var m = { home: '/', archives: '/archives/', tags: '/tags/', about: '/about/' };
+      if (m[parts[1]]) window.location.href = m[parts[1]];
+    } else if (cmd === 'theme') {
+      document.body.classList.toggle('light');
+    } else if (cmd) {
+      alert('command not found: ' + cmd);
+    }
+  }
+  document.addEventListener('keydown', function (e) {
+    if (e.key === ':' && document.activeElement === document.body) {
+      e.preventDefault();
+      bar.classList.add('open');
+      input.focus();
+    } else if (e.key === 'Escape') {
+      bar.classList.remove('open');
+      input.blur();
+    }
+  });
+  input.addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter') return;
+    var v = input.value.trim();
+    input.value = '';
+    bar.classList.remove('open');
+    input.blur();
+    exec(v);
+  });
+})();
+</script>

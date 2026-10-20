@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>评论审核台 // TERMINAL LOG</title>
+<style>
+  :root { --bg:#0b0e14; --panel:#131820; --panel2:#171d27; --text:#c9d1d9; --muted:#8b949e; --dim:#5f6b7a;
+          --line:#232b38; --cyan:#00e5a0; --magenta:#ff2e97; --purple:#7f77dd; --term:#00ff9c; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font-family:"JetBrains Mono","Fira Code",ui-monospace,Menlo,Consolas,"PingFang SC","Microsoft YaHei",sans-serif;
+         font-size:14px; line-height:1.7; }
+  a { color:var(--cyan); }
+  .wrap { max-width:820px; margin:0 auto; padding:28px 20px 60px; }
+  h1 { font-size:18px; color:var(--term); margin:0 0 4px; font-weight:500; }
+  .sub { color:var(--dim); font-size:12px; margin-bottom:24px; }
+  input, textarea, button, select { font-family:inherit; font-size:14px; }
+  input[type=text], input[type=password], textarea {
+    width:100%; background:var(--panel); color:var(--text); border:1px solid var(--line);
+    border-radius:4px; padding:8px 10px;
+  }
+  textarea { min-height:60px; resize:vertical; }
+  button { background:transparent; color:var(--cyan); border:1px solid var(--cyan); border-radius:4px;
+           padding:6px 14px; cursor:pointer; }
+  button:hover { background:rgba(0,229,160,.1); }
+  button.ghost { border-color:var(--line); color:var(--muted); }
+  button.danger { border-color:var(--magenta); color:var(--magenta); }
+  .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .item { border:1px solid var(--line); background:var(--panel); padding:14px; margin-bottom:12px; }
+  .item.flagged { border-color:var(--magenta); }
+  .meta { color:var(--dim); font-size:12px; margin-bottom:6px; }
+  .name { color:var(--cyan); }
+  .body { white-space:pre-wrap; word-break:break-word; margin:6px 0 10px; }
+  .tag { color:var(--magenta); font-size:12px; }
+  .msg { min-height:1.6em; margin-top:10px; font-size:13px; }
+  .msg.err { color:var(--magenta); } .msg.ok { color:var(--term); }
+  .hidden { display:none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>// 评论审核台</h1>
+  <div class="sub">先审后发（D-11）· 数据可导出（C-10）。本页面不索引、不公开链接，请勿外传。</div>
+
+  <div id="login">
+    <div class="row" style="margin-bottom:8px">
+      <input type="password" id="token" placeholder="COMMENT_ADMIN_TOKEN" style="flex:1;min-width:220px">
+      <button id="btn-login">连接</button>
+    </div>
+    <div class="msg" id="login-msg"></div>
+  </div>
+
+  <div id="panel" class="hidden">
+    <div class="row" style="margin-bottom:14px">
+      <button id="btn-pending">待审</button>
+      <button class="ghost" id="btn-approved">已发布</button>
+      <button class="ghost" id="btn-deleted">已删除</button>
+      <button class="ghost" id="btn-export-json">导出 JSON</button>
+      <button class="ghost" id="btn-export-csv">导出 CSV</button>
+      <button class="ghost" id="btn-logout">断开</button>
+    </div>
+    <div id="list"></div>
+    <div class="msg" id="msg"></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var API = '/api/comments';
+  var MOD = '/api/comments/moderate';
+  var EXP = '/api/comments/export';
+  var token = sessionStorage.getItem('cl_token') || '';
+
+  var elLogin = document.getElementById('login'), elPanel = document.getElementById('panel');
+  var elList = document.getElementById('list'), elMsg = document.getElementById('msg');
+  var elLoginMsg = document.getElementById('login-msg'), elToken = document.getElementById('token');
+  var current = 'pending';
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c];
+    });
+  }
+  function fmt(ms) {
+    var d = new Date(ms), p = function (n) { return n < 10 ? '0' + n : '' + n; };
+    return d.getFullYear() + '-' + p(d.getMonth()+1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+  }
+  function say(el, text, cls) { el.className = 'msg' + (cls ? ' ' + cls : ''); el.textContent = text; }
+
+  function call(url, opts) {
+    opts = opts || {};
+    opts.headers = Object.assign({ 'x-admin-token': token }, opts.headers || {});
+    return fetch(url, opts).then(function (r) {
+      if (r.status === 401) { logout(true); throw new Error('token 无效或已过期'); }
+      return r.json().catch(function () { return {}; }).then(function (d) {
+        if (!r.ok) throw new Error(d.error || ('HTTP ' + r.status));
+        return d;
+      });
+    });
+  }
+
+  function render(items) {
+    if (!items.length) { elList.innerHTML = '<div class="meta">（空）</div>'; return; }
+    elList.innerHTML = items.map(function (c) {
+      return '<div class="item' + (c.flagged ? ' flagged' : '') + '" data-id="' + esc(c.id) + '" data-slug="' + esc(c.slug) + '">'
+        + '<div class="meta"><span class="name">' + esc(c.nickname || '匿名访客') + '</span> · ' + fmt(c.created_at)
+        + ' · ' + esc(c.slug) + (c.email ? ' · ' + esc(c.email) : '')
+        + (c.flagged ? ' · <span class="tag">命中敏感词</span>' : '')
+        + (c.is_admin ? ' · <span class="tag">站长</span>' : '') + '</div>'
+        + '<div class="body">' + esc(c.content) + '</div>'
+        + '<div class="row">'
+        + (c.status === 'pending' ? '<button data-act="approve">放行</button>' : '')
+        + (c.status !== 'deleted' ? '<button class="danger" data-act="delete">删除</button>' : '')
+        + '<button class="ghost" data-act="reply">回复</button>'
+        + '</div>'
+        + '<div class="replybox hidden" style="margin-top:10px">'
+        + '<textarea placeholder="回复内容（将以站长身份直接公开）"></textarea>'
+        + '<div class="row" style="margin-top:6px"><button data-act="send">发送回复</button><button class="ghost" data-act="cancel">取消</button></div>'
+        + '</div></div>';
+    }).join('');
+  }
+
+  function load(status) {
+    current = status;
+    say(elMsg, '[■□□□] 加载中…');
+    call(MOD + '?status=' + encodeURIComponent(status) + '&limit=50')
+      .then(function (d) { render(d.comments || []); say(elMsg, '共 ' + ((d.comments || []).length) + ' 条'); })
+      .catch(function (e) { say(elMsg, '加载失败：' + e.message, 'err'); });
+  }
+
+  elList.addEventListener('click', function (e) {
+    var btn = e.target.closest('button'); if (!btn) return;
+    var item = e.target.closest('.item'); var act = btn.getAttribute('data-act');
+    var id = item.getAttribute('data-id'), slug = item.getAttribute('data-slug');
+    var box = item.querySelector('.replybox');
+
+    if (act === 'reply') { box.classList.remove('hidden'); return; }
+    if (act === 'cancel') { box.classList.add('hidden'); return; }
+    if (act === 'send') {
+      var text = box.querySelector('textarea').value.trim();
+      if (!text) { say(elMsg, '回复内容为空', 'err'); return; }
+      call(MOD, { method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ action: 'reply', id: id, slug: slug, content: text }) })
+        .then(function () { say(elMsg, '已回复', 'ok'); load(current); })
+        .catch(function (err) { say(elMsg, '失败：' + err.message, 'err'); });
+      return;
+    }
+    call(MOD, { method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ action: act, id: id }) })
+      .then(function () { say(elMsg, act === 'approve' ? '已放行' : '已删除', 'ok'); load(current); })
+      .catch(function (err) { say(elMsg, '失败：' + err.message, 'err'); });
+  });
+
+  document.getElementById('btn-login').onclick = function () {
+    token = elToken.value.trim();
+    if (!token) { say(elLoginMsg, '请输入 token', 'err'); return; }
+    call(MOD + '?status=pending&limit=1')
+      .then(function () {
+        sessionStorage.setItem('cl_token', token);
+        elLogin.classList.add('hidden'); elPanel.classList.remove('hidden');
+        load('pending');
+      })
+      .catch(function (e) { say(elLoginMsg, '连接失败：' + e.message, 'err'); });
+  };
+
+  document.getElementById('btn-pending').onclick = function () { load('pending'); };
+  document.getElementById('btn-approved').onclick = function () { load('approved'); };
+  document.getElementById('btn-deleted').onclick = function () { load('deleted'); };
+  document.getElementById('btn-export-json').onclick = function () { location.href = EXP + '?format=json&token=' + encodeURIComponent(token); };
+  document.getElementById('btn-export-csv').onclick = function () { location.href = EXP + '?format=csv&token=' + encodeURIComponent(token); };
+
+  function logout(silent) {
+    sessionStorage.removeItem('cl_token'); token = '';
+    elPanel.classList.add('hidden'); elLogin.classList.remove('hidden');
+    if (silent) say(elLoginMsg, '登录已失效，请重新连接', 'err');
+  }
+  document.getElementById('btn-logout').onclick = function () { logout(false); };
+
+  if (token) { elLogin.classList.add('hidden'); elPanel.classList.remove('hidden'); load('pending'); }
+})();
+</script>
+</body>
+</html>

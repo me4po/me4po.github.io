@@ -1,0 +1,10 @@
+{{ define "main" }}
+<div class="wrap">
+  <div class="section-title">标签</div>
+  <div style="display:flex;flex-wrap:wrap;gap:14px;font-size:15px">
+    {{ range .Data.Terms.Alphabetical }}
+      <a class="card-tag" href="{{ .Page.RelPermalink }}">{{ .Page.Title }} ({{ .Count }})</a>
+    {{ end }}
+  </div>
+</div>
+{{ end }}

@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>{{ partial "head.html" . }}</head>
+<body>
+{{ if site.Params.effects.scanlines }}<div class="scanlines" aria-hidden="true"></div>{{ end }}
+
+{{ partial "header.html" . }}
+
+<main id="main">{{ block "main" . }}{{ end }}</main>
+
+{{ partial "footer.html" . }}
+
+{{ if site.Params.effects.commandBar }}{{ partial "command-bar.html" . }}{{ end }}
+{{ partial "effects.html" . }}
+</body>
+</html>

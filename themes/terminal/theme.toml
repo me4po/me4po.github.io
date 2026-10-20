@@ -1,0 +1,10 @@
+name = "terminal"
+license = "MIT"
+description = "极客 / 神秘 / 终端风格的 Hugo 主题（PRD v1.2 第 8 章视觉规范实现）"
+homepage = ""
+tags = ["dark", "geek", "terminal", "blog"]
+features = ["blog", "comments", "no-external-cdn"]
+min_version = "0.120.0"
+
+[author]
+  name = "站长"

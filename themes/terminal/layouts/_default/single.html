@@ -1,0 +1,26 @@
+{{ define "main" }}
+<article class="wrap">
+  {{ $tw := "" }}{{ if site.Params.effects.typewriter }}{{ $tw = "tw" }}{{ end }}
+
+  <h1 class="post-title">
+    <span class="{{ $tw }}" data-text="{{ .Title }}">{{ .Title }}</span>{{ if site.Params.effects.cursor }}<span class="cursor" aria-hidden="true"></span>{{ end }}
+  </h1>
+
+  <div class="post-meta">
+    <span>{{ .Date.Format "2006-01-02" }}</span>
+    <span>{{ .ReadingTime }} 分钟</span>
+    {{ with .Params.tags }}
+    <span>{{ range $i, $t := . }}{{ if $i }} {{ end }}<a class="card-tag" href="{{ "/tags/" | relURL }}{{ $t | urlize }}/">{{ $t }}</a>{{ end }}</span>
+    {{ end }}
+  </div>
+
+  <div class="post-content">{{ .Content }}</div>
+
+  <nav style="margin-top:48px;display:flex;justify-content:space-between;gap:16px;font-size:13px">
+    {{ with .PrevInSection }}<a href="{{ .RelPermalink }}">← {{ .Title }}</a>{{ else }}<span></span>{{ end }}
+    {{ with .NextInSection }}<a href="{{ .RelPermalink }}">{{ .Title }} →</a>{{ else }}<span></span>{{ end }}
+  </nav>
+
+  {{ partial "comments.html" . }}
+</article>
+{{ end }}

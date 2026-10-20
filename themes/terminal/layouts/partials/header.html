@@ -1,0 +1,24 @@
+<header class="site-header">
+  <div class="wrap">
+    <a href="{{ "/" | relURL }}" aria-label="{{ .Site.Title }}">
+      {{ if site.Params.effects.asciiLogo }}
+      <pre class="ascii-logo" aria-hidden="true">████████╗███████╗██████╗ ███╗   ███╗
+╚══██╔══╝██╔════╝██╔══██╗████╗ ████║
+   ██║   █████╗  ██████╔╝██╔████╔██║
+   ██║   ██╔══╝  ██╔══██╗██║╚██╔╝██║
+   ██║   ███████╗██║  ██║██║ ╚═╝ ██║
+   ╚═╝   ╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝</pre>
+      {{ end }}
+      <div class="logo-fallback">TERM // LOG</div>
+    </a>
+    <div class="logo-sub">{{ site.Params.prompt }}:~$<span class="cursor" aria-hidden="true"></span></div>
+
+    {{ $g := "" }}{{ if site.Params.effects.glitch }}{{ $g = "glitch" }}{{ end }}
+    <nav class="nav" aria-label="主导航">
+      {{ range site.Menus.main }}
+      <a class="{{ $g }}" href="{{ .URL | relURL }}"
+        {{ if $.IsMenuCurrent "main" . }}aria-current="page"{{ end }}>{{ .Name }}</a>
+      {{ end }}
+    </nav>
+  </div>
+</header>
