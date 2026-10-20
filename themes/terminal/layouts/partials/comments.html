@@ -1,4 +1,6 @@
-{{ if and site.Params.comments.enabled (ne .Params.comments false) }}
+{{ $commentsOn := true }}
+{{ if isset .Params "comments" }}{{ $commentsOn = .Params.comments }}{{ end }}
+{{ if and site.Params.comments.enabled $commentsOn }}
 {{ $slug := .Title | urlize }}{{ with .File }}{{ $slug = .TranslationBaseName }}{{ end }}
 
 <section class="comments" id="comments"
