@@ -1,11 +1,17 @@
 baseURL = "https://REPLACE-ME.pages.dev/"
-languageCode = "zh-cn"
+locale = "zh-CN"
 hasCJKLanguage = true
 title = "TERMINAL // LOG"
 theme = "terminal"
 paginate = 10
 enableRobotsTXT = false
 enableGitInfo = false
+
+# 时区陷阱修复：Cloudflare 构建机按 UTC 运行。
+# 北京时间 08:00 之前发布、front matter 里只写当天日期（如 date: 2026-10-21）的文章，
+# 其 publishDate 是 2026-10-21T00:00:00Z，在 UTC 下仍属"未来"，Hugo 默认会跳过不产出。
+# 本站不做定时发布，故全局开启 buildFuture，避免"文章推上去了页面却没有"的诡异现象。
+buildFuture = true
 
 [params]
   author = "站长"

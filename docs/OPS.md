@@ -33,6 +33,11 @@ draft: false
 4. Commit & Push 到 `main`。
 5. **确认**：等邮件通知或看部署页，然后刷新站点确认内容与图片生效（30 秒自检）。
 
+> **发布后页面 404 / sitemap 里没有这篇文章**：先看是不是时区问题。
+> Cloudflare 按 UTC 构建，`date: 2026-10-21` 在北京时间 08:00 前仍属"未来"，Hugo 会跳过。
+> `config.toml` 已设 `buildFuture = true`；若仍想精确控制，front matter 写完整时间：
+> `date: 2026-10-21T20:00:00+08:00`。
+
 ## SOP-03 备用 / 降级发布
 
 - 备用：换矩阵里次优编辑器，重复 SOP-02。
@@ -56,11 +61,19 @@ draft: false
 
 常见失败原因，按概率排序：
 
-1. `HUGO_VERSION` 未固定或与主题不兼容 → 固定三位版本号
+1. `HUGO_VERSION` 未固定或与主题不兼容 → 固定三位版本号（当前 `0.168.0`，本地已实测）
 2. front matter 缩进/引号错误 → 看日志里报错的文件
-3. `functions/` 下 JS 语法错误 → 构建日志会指向具体文件
+3. `functions/` 下 JS 语法错误或**相对路径写错** → 构建日志会指向具体文件。
+   注意层级：`functions/api/*.js` 引 `../lib/`，`functions/api/comments/*.js` 引 `../../lib/`（已踩过一次）
 4. 主题依赖 SCSS 但环境无 Hugo Extended → 换主题或确认 Extended
 5. 资源超限（单文件 > 25 MiB）→ 压缩图片
+
+本地先自查再推，能省一次构建额度：
+
+```bash
+hugo --minify                  # 应输出 Pages ≥ 15 且无 WARN/ERROR
+node tests/comments.test.mjs   # 应输出「15 通过 / 0 失败」
+```
 
 连续 2 次修不好就先回滚（SOP-05），保证站点可用优先。
 

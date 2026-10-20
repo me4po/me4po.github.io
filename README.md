@@ -27,6 +27,7 @@ blog/
 │   ├── api/comments/export.js    导出（鉴权）
 │   └── lib/                    鉴权与敏感词
 ├── schema.sql                  D1 建表语句
+├── tests/comments.test.mjs     评论接口冒烟测试（无依赖）
 ├── .cloudflare/README.md       构建与运行时配置
 ├── docs/OPS.md                 运维手册（SOP）
 └── PRD 见仓库外的 PRD_Cloudflare_Pages_GitHub_个人博客_v1.2.md
@@ -53,8 +54,22 @@ blog/
 - 数据可导出（C-10），邮箱与 IP 不外泄（NFR-016）
 - 评论接口挂了会隐藏评论区，正文照常可读（C-12）
 
+## 本地开发与验证
+
+```bash
+hugo server              # 本地预览 http://localhost:1313
+hugo --minify            # 生产构建（等价于 Cloudflare 的 build command）
+node tests/comments.test.mjs   # 评论接口冒烟测试，15 条断言
+```
+
+改了主题或函数之后，这两条都要跑一遍。
+
+> 注意时区：只写 `date: YYYY-MM-DD` 的文章，在 UTC 下可能被判为"未来内容"而整篇不产出。
+> `config.toml` 已设 `buildFuture = true` 规避，详见 `.cloudflare/README.md`。
+
 ## 首次部署前必须替换
 
 - `config.toml` 的 `baseURL`
 - `static/robots.txt` 的 Sitemap 域名
-- `.cloudflare/README.md` 里的 `HUGO_VERSION`
+
+（~~`.cloudflare/README.md` 的 `HUGO_VERSION`~~ 已实测为 `0.168.0`，无需再改）

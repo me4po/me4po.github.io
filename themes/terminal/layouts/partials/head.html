@@ -20,7 +20,8 @@
 {{ with .Params.cover }}<meta property="og:image" content="{{ . | absURL }}">{{ end }}
 {{ if .IsPage }}<meta property="article:published_time" content="{{ .Date.Format "2006-01-02T15:04:05Z07:00" }}">{{ end }}
 
-<meta name="twitter:card" content="summary_large_image">
+{{/* 有封面图才用大图卡片；没有图就不要声明 large_image，否则分享出去是个缺口 */}}
+<meta name="twitter:card" content="{{ if .Params.cover }}summary_large_image{{ else }}summary{{ end }}">
 <meta name="twitter:title" content="{{ $title }}">
 <meta name="twitter:description" content="{{ $desc }}">
 {{ with .Params.cover }}<meta name="twitter:image" content="{{ . | absURL }}">{{ end }}

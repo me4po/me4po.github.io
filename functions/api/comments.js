@@ -1,6 +1,10 @@
 // 评论公开接口：GET 取已审核评论，POST 提交新评论（进入待审）
 // PRD v1.2 · CM-05（Pages Functions + D1）· D-11 先审后发 · C-12 失败不阻塞正文
 
+// 注意：本文件在 functions/api/ 下，lib 在 functions/lib/，相对路径是 "../lib/"
+// （functions/api/comments/ 下的文件才是 "../../lib/"）
+import { hitSensitive } from '../lib/words.js';
+
 const MAX_LEN = 1000;
 const MIN_LEN = 2;
 const LIMIT_PER_MINUTE = 3;
@@ -47,8 +51,19 @@ export async function onRequestGet(context) {
       .bind(slug, pageSize)
       .all();
 
-    // NFR-016：email 永不出现在公开响应里
-    return json({ comments: rs.results || [] });
+    // NFR-016：email / ua_hash 永不出现在公开响应里。
+    // 不依赖 SQL 的列名——显式投影，避免以后有人改成 SELECT * 就泄了隐私。
+    const safe = (rs.results || []).map((r) => ({
+      id: r.id,
+      slug: r.slug,
+      parent_id: r.parent_id ?? null,
+      nickname: r.nickname,
+      content: r.content,
+      is_admin: r.is_admin ? 1 : 0,
+      created_at: r.created_at
+    }));
+
+    return json({ comments: safe });
   } catch (e) {
     return json({ comments: [], error: 'query failed' }, 500);
   }
@@ -112,7 +127,6 @@ export async function onRequestPost(context) {
     if (!parent) return json({ error: '被回复的评论不存在' }, 400);
   }
 
-  const { hitSensitive } = await import('../../lib/words.js');
   const flagged = hitSensitive(content) ? 1 : 0;
 
   const id = crypto.randomUUID();

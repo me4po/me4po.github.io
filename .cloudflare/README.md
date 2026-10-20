@@ -16,9 +16,19 @@
 
 | 变量 | 值 | 说明 |
 | --- | --- | --- |
-| `HUGO_VERSION` | 待 M1 实测后回填（三位版本号，如 `0.128.0`） | Cloudflare 默认 Hugo 版本较旧，不固定易构建失败或主题不兼容 |
+已在本地 `hugo v0.168.0+extended` 实测构建通过（15 页，0 警告），故按下表固定版本。
 
-主题为纯 CSS（无 SCSS/PostCSS），**不需要 Hugo Extended**；若后续换成依赖 SCSS 的主题，需重新确认 Extended 获取方式（PRD D-08）。
+| 变量 | 值 | 说明 |
+| --- | --- | --- |
+| `HUGO_VERSION` | `0.168.0` | Cloudflare 默认 Hugo 版本较旧，不固定易构建失败或主题不兼容。**升级 Hugo 时要同步改这里 + 本地验证后再推** |
+
+主题为纯 CSS（无 SCSS/PostCSS），**不强制 Hugo Extended**；本地装的是 extended 版，若后续换成依赖 SCSS 的主题，需按 PRD D-08 重新确认 Extended 获取方式。
+
+### 时区别踩坑（已修，别改回去）
+
+Cloudflare 构建机按 **UTC** 运行。北京时间 08:00 之前发布、front matter 只写当天日期（如 `date: 2026-10-21`）的文章，其 `publishDate` 在 UTC 下仍是"未来"，Hugo 默认会整篇跳过——表现为"文章推上去了但页面 404"。
+
+`config.toml` 里已设 `buildFuture = true` 规避。本站不做定时发布，所以不要删这一行。若以后需要定时发布，改成"front matter 里写完整时间（如 `2026-10-21T20:00:00+08:00`）"并移除该配置。
 
 ## 3. 评论运行时（D-10 / CM-05）
 
