@@ -1,9 +1,14 @@
 baseURL = "https://REPLACE-ME.pages.dev/"
-locale = "zh-CN"
+# languageCode 是 ≤0.157 的写法（0.158+ 改用 locale，这里是 WARN 不是 ERROR）。
+# 保留旧写法是为了兼容 Cloudflare Pages 的默认 Hugo 0.147.7；若哪天把 HUGO_VERSION
+# 固定到 0.158+ 并确认生效，可换成 locale = "zh-CN"。
+languageCode = "zh-CN"
 hasCJKLanguage = true
 title = "TERMINAL // LOG"
 theme = "terminal"
-paginate = 10
+# paginate 在 Hugo 0.128 废弃、后续版本已移除（Cloudflare 上直接报 ERROR）。
+# 用 dotted key 写，避免 [pagination] 表把后面的顶层键吞掉。
+pagination.pagerSize = 10
 enableRobotsTXT = false
 enableGitInfo = false
 

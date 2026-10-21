@@ -61,7 +61,7 @@ draft: false
 
 常见失败原因，按概率排序：
 
-1. `HUGO_VERSION` 未固定或与主题不兼容 → 固定三位版本号（当前 `0.168.0`，本地已实测）
+1. `HUGO_VERSION` 未固定、或固定后没重新部署 → 看构建日志里的 `hugo vX.Y.Z` 确认（当前 `0.147.7`）
 2. front matter 缩进/引号错误 → 看日志里报错的文件
 3. `functions/` 下 JS 语法错误或**相对路径写错** → 构建日志会指向具体文件。
    注意层级：`functions/api/*.js` 引 `../lib/`，`functions/api/comments/*.js` 引 `../../lib/`（已踩过一次）
@@ -71,9 +71,12 @@ draft: false
 本地先自查再推，能省一次构建额度：
 
 ```bash
-hugo --minify                  # 应输出 Pages ≥ 15 且无 WARN/ERROR
-node tests/comments.test.mjs   # 应输出「15 通过 / 0 失败」
+hugo147 --minify                 # 与 Cloudflare 同版本；应输出 Pages ≥ 15 且无 WARN/ERROR
+node tests/comments.test.mjs     # 应输出「15 通过 / 0 失败」
 ```
+
+> 别用 `hugo`（brew 的 0.168.0）代替 `hugo147` 做发布前验证——旧版有已移除的语法限制，
+> 本地新版本过了不代表云端过得了。
 
 连续 2 次修不好就先回滚（SOP-05），保证站点可用优先。
 

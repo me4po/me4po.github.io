@@ -57,12 +57,14 @@ blog/
 ## 本地开发与验证
 
 ```bash
-hugo server              # 本地预览 http://localhost:1313
-hugo --minify            # 生产构建（等价于 Cloudflare 的 build command）
+hugo server              # 日常写作预览 http://localhost:1313（brew 的 0.168.0）
+hugo147 --minify         # 发布前验证：与 Cloudflare 同版本，期望 15 页且无 WARN/ERROR
 node tests/comments.test.mjs   # 评论接口冒烟测试，15 条断言
 ```
 
-改了主题或函数之后，这两条都要跑一遍。
+> **两个 hugo 并存是有意为之**：Cloudflare 构建镜像默认 Hugo 是 **0.147.7**，比本地 brew 装的
+> 0.168.0 旧，旧版会多出已移除的语法限制（曾因 `paginate` 直接构建失败）。
+> **推送前一定要用 `hugo147` 验一遍**，用 `hugo` 验过不代表云端能过。
 
 > 注意时区：只写 `date: YYYY-MM-DD` 的文章，在 UTC 下可能被判为"未来内容"而整篇不产出。
 > `config.toml` 已设 `buildFuture = true` 规避，详见 `.cloudflare/README.md`。

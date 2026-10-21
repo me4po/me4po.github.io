@@ -16,13 +16,21 @@
 
 | 变量 | 值 | 说明 |
 | --- | --- | --- |
-已在本地 `hugo v0.168.0+extended` 实测构建通过（15 页，0 警告），故按下表固定版本。
+Cloudflare Pages 构建镜像**默认 Hugo = 0.147.7**（v3 build image）。本地已装同名版本
+（`/opt/homebrew/bin/hugo147`）实测通过：15 页，0 警告，0 错误。
 
 | 变量 | 值 | 说明 |
 | --- | --- | --- |
-| `HUGO_VERSION` | `0.168.0` | Cloudflare 默认 Hugo 版本较旧，不固定易构建失败或主题不兼容。**升级 Hugo 时要同步改这里 + 本地验证后再推** |
+| `HUGO_VERSION` | `0.147.7` | 明确固定，避免 Cloudflare 滚动升级预装软件时把构建搞挂 |
 
-主题为纯 CSS（无 SCSS/PostCSS），**不强制 Hugo Extended**；本地装的是 extended 版，若后续换成依赖 SCSS 的主题，需按 PRD D-08 重新确认 Extended 获取方式。
+> 教训：不要拿本地最新版（0.168.0）直接填到 Cloudflare。云端旧版本有额外的语法限制，
+> 曾经因 `paginate`（0.128 废弃、后续移除）直接构建失败。**发布前请用 `hugo147`（不是 `hugo`）验证。**
+
+`HUGO_VERSION` 是否真的生效，看构建日志里那行 `hugo vX.Y.Z`。若显示的仍是别的值，
+说明环境变量没加上或加完没重新部署——**改环境变量不会自动重新部署**。
+
+主题为纯 CSS（无 SCSS/PostCSS），**不强制 Hugo Extended**；Cloudflare 预装的是 extended 版。
+若后续换成依赖 SCSS 的主题，需按 PRD D-08 重新确认。
 
 ### 时区别踩坑（已修，别改回去）
 

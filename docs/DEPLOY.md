@@ -51,18 +51,31 @@ openssl rand -hex 32
 
 ## 2. 固定 Hugo 版本（关键，别跳过）
 
-首次部署**大概率会失败**，因为 Cloudflare 的默认 Hugo 版本可能太旧。先把它固定：
+Cloudflare 构建镜像默认 Hugo 是 **0.147.7**（比本地 brew 装的 0.168.0 旧），
+而且旧版本会**多出一些已移除的语法限制**。所以必须固定版本，并在本地用同版本验证。
 
 1. 进项目 → **Settings** → **Environment variables** → **Add**
 2. 按下表加一条（Production 和 Preview 都勾上）：
 
 | Variable name | Value |
 | --- | --- |
-| `HUGO_VERSION` | `0.168.0` |
+| `HUGO_VERSION` | `0.147.7` |
 
-3. 回 **Deployments** → 最新一条右侧 `···` → **Retry deployment**
+3. **必须重新部署才会生效** —— 保存环境变量不会触发构建：
+   **Deployments** → 最新一条右侧 `···` → **Retry deployment**
+4. 生效验证：新构建日志里应出现 `hugo v0.147.7`。**若显示的还是别的版本，说明没生效**，回头检查第 2、3 步。
 
-> 本地已用 `hugo v0.168.0+extended` 实测通过（15 页，0 警告），这个版本号是验证过的。
+本地对齐版本（已装好，发布前用它）：
+
+```bash
+hugo147 --minify      # 与 Cloudflare 同版本；期望 15 页、无 WARN/ERROR
+```
+
+日常写作用 `hugo server`（brew 的 0.168.0）即可，两者配置兼容。
+
+> **已踩过的坑**：`paginate = 10` 在 Hugo 0.128 废弃、后续版本移除，
+> 在 Cloudflare 的 0.147.7 上是 **ERROR**（不是警告），直接构建失败。
+> 已改为 `pagination.pagerSize = 10`。同理 `languageCode` 保留旧写法是为了兼容 0.147.7。
 
 ---
 
@@ -242,7 +255,8 @@ curl -s "$DOMAIN/api/comments?slug=2026-10-21-hello-terminal"
 
 | 现象 | 原因 | 处理 |
 | --- | --- | --- |
-| 构建日志报 `hugo: command not found` 或版本相关 | `HUGO_VERSION` 未设 | 回到第 2 步 |
+| 构建日志报 `hugo: command not found` 或版本相关 | `HUGO_VERSION` 未设或没生效 | 回到第 2 步，并看日志确认版本行 |
+| `ERROR deprecated: site config key paginate was deprecated ... and subsequently removed` | config 用了 `paginate` | 已修为 `pagination.pagerSize = 10`；若还出现说明本地改动没推上去 |
 | 构建成功但页面 404 / sitemap 里没这篇文章 | **时区陷阱**：UTC 构建下 `date: 2026-10-21` 在北京 08:00 前属"未来" | `config.toml` 已设 `buildFuture = true`；若被删了就加回来 |
 | `/api/comments` 返回 `DB not bound` | D1 没绑或绑完没重新部署 | 第 7 步 + 第 9 步 |
 | `/admin/` 一直 401 | token 不一致，或没重新部署 | 检查环境变量值两端是否一致（注意别带空格） |
