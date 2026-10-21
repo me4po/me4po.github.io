@@ -1,7 +1,12 @@
 {{ define "main" }}
 <div class="wrap">
   <div class="section-title">{{ .Title }}</div>
-  {{ range .Pages }}
+  {{ $pinned := where .Pages "Params.pinned" true }}
+  {{ $normal := where .Pages "Params.pinned" "!=" true }}
+  {{ range $pinned.ByDate.Reverse }}
+    {{ partial "post-card.html" . }}
+  {{ end }}
+  {{ range $normal.ByDate.Reverse }}
     {{ partial "post-card.html" . }}
   {{ end }}
 </div>

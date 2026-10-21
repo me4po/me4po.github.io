@@ -31,7 +31,9 @@ blog/
 见 `docs/OPS.md` 的 SOP-02。要点：
 
 - 文件放 `content/posts/YYYY-MM-DD-slug.md`
-- front matter 必填 `title` / `date`，按需填 `tags` / `summary` / `cover`
+- front matter 必填 `title` / `date`；同一天发多篇时 `date` 要带时间（如 `2026-10-21T17:30:00+08:00`）
+- 按需填 `tags` / `summary` / `cover` / `comments` / `pinned`
+- `pinned: true` 会把文章固定排在首页最前（多篇置顶时仍按日期倒序）
 - 配图先压到 ≤ 300 KB，放 `static/images/<日期>/`
 - push 到 `main` 即发布
 
@@ -63,6 +65,9 @@ hugo147 --minify     # 发布前验证：与 Actions 同版本，期望 15 页�
 
 > 注意时区：只写 `date: YYYY-MM-DD` 的文章，在 UTC 下可能被判为“未来内容”而整篇不产出。
 > `hugo.toml` 已设 `buildFuture = true` 规避。
+>
+> 排序规则：首页与文章列表按 `date` 倒序，`pinned: true` 的文章永远排在最前。
+> 只写日期时同一天的文章时间相同，会退化为按标题排序——同一天发多篇请给 `date` 加时间。
 
 ## 发布
 

@@ -1,5 +1,5 @@
 <a class="card" href="{{ .RelPermalink }}">
-  <h2 class="card-title">{{ .Title }}</h2>
+  <h2 class="card-title">{{ with .Params.pinned }}<span class="pin-badge">置顶</span>{{ end }}{{ .Title }}</h2>
   <div class="card-meta">
     <span>{{ .Date.Format "2006-01-02" }}</span>
     <span>{{ .ReadingTime }} min</span>

@@ -4,11 +4,26 @@
 
   <div class="section-title">最新文章</div>
   {{ $posts := where site.RegularPages "Section" "posts" }}
-  {{ range first 10 $posts }}
-    {{ partial "post-card.html" . }}
+  {{ $pinned := where $posts "Params.pinned" true }}
+  {{ $normal := where $posts "Params.pinned" "!=" true }}
+  {{ $limit := 10 }}
+  {{ $shown := 0 }}
+
+  {{ range $pinned.ByDate.Reverse }}
+    {{ if lt $shown $limit }}
+      {{ partial "post-card.html" . }}
+      {{ $shown = add $shown 1 }}
+    {{ end }}
   {{ end }}
 
-  {{ if gt (len $posts) 10 }}
+  {{ range $normal.ByDate.Reverse }}
+    {{ if lt $shown $limit }}
+      {{ partial "post-card.html" . }}
+      {{ $shown = add $shown 1 }}
+    {{ end }}
+  {{ end }}
+
+  {{ if gt (len $posts) $limit }}
   <p style="margin-top:28px;font-size:14px"><a href="{{ "/archives/" | relURL }}">查看全部 →</a></p>
   {{ end }}
 </div>

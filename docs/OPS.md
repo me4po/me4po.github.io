@@ -20,16 +20,18 @@
 ```yaml
 ---
 title: "标题"
-date: 2026-10-21
+date: 2026-10-21T17:30:00+08:00   # 同一天发多篇时必须带时间
 tags: ["标签"]
 summary: "一句话摘要"
 cover: "/images/2026-10-21/cover.jpg"   # 可选
+pinned: true                           # 可选：置顶到首页最前
 draft: false
 ---
 ```
 
-2. 配图：先压到 ≤ 300 KB（WebP/JPEG），放 `static/images/YYYY-MM-DD/`，正文用相对路径引用。
-3. 发布前自检：
+2. 排序：首页与文章列表按 `date` 倒序；`pinned: true` 优先。只写日期时同一天的文章时间相同，会退化为按标题排序，所以同日多篇务必写完整时间。
+3. 配图：先压到 ≤ 300 KB（WebP/JPEG），放 `static/images/YYYY-MM-DD/`，正文用相对路径引用。
+4. 发布前自检：
 
 ```bash
 hugo147 --minify     # 期望 15 页以上、无 WARN/ERROR
