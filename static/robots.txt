@@ -1,6 +1,4 @@
 User-agent: *
 Allow: /
-Disallow: /admin/
-Disallow: /api/
 
-Sitemap: https://REPLACE-ME.pages.dev/sitemap.xml
+Sitemap: https://me4po.github.io/sitemap.xml

@@ -1,4 +1,4 @@
-# Hugo 构建产物（云端构建，本地不提交）
+# Hugo 构建产物（GitHub Actions 云端构建，本地不提交）
 public/
 resources/
 .hugo_build.lock

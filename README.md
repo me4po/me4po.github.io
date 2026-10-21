@@ -1,36 +1,29 @@
 # TERMINAL // LOG
 
-一个托管在 Cloudflare Pages、内容源在 GitHub 的个人博客。零成本、免服务器、浏览器内完成写作与发布。
+一个托管在 GitHub Pages、内容源在同一 GitHub 仓库的个人博客。
+暗色终端风格，等宽字体，Markdown 写作，push 即发布。
 
-暗色终端风格，等宽字体，评论先审后发。
+对外地址：<https://me4po.github.io/>
 
 ## 目录结构
 
 ```
 blog/
 ├── hugo.toml                  站点配置（含视觉开关与评论开关）
-├── content/                    文章与页面
-│   ├── posts/                  文章（YYYY-MM-DD-slug.md）
+├── content/                   文章与页面
+│   ├── posts/                 文章（YYYY-MM-DD-slug.md）
 │   ├── about.md
 │   └── archives.md
-├── static/                     静态资源
-│   ├── images/                 图片（images/<日期>/<文件名>）
-│   ├── admin/index.html        评论审核台（noindex）
+├── static/                    静态资源
+│   ├── images/                图片（images/<日期>/<文件名>）
 │   ├── favicon.svg
 │   └── robots.txt
-├── themes/terminal/            自制主题（极客 / 神秘 / 终端）
+├── themes/terminal/           自制主题（极客 / 神秘 / 终端）
 │   ├── assets/css/main.css
 │   └── layouts/
-├── functions/                  评论接口（Pages Functions + D1）
-│   ├── api/comments.js         GET 列表 / POST 提交
-│   ├── api/comments/moderate.js  审核（鉴权）
-│   ├── api/comments/export.js    导出（鉴权）
-│   └── lib/                    鉴权与敏感词
-├── schema.sql                  D1 建表语句
-├── tests/comments.test.mjs     评论接口冒烟测试（无依赖）
-├── .cloudflare/README.md       构建与运行时配置
-├── docs/OPS.md                 运维手册（SOP）
-└── PRD 见仓库外的 PRD_Cloudflare_Pages_GitHub_个人博客_v1.2.md
+├── .github/workflows/hugo.yml GitHub Actions：Hugo 构建 + Pages 部署
+├── docs/OPS.md                运维手册（SOP）
+└── docs/DEPLOY.md             部署手册（含一次性配置与踩坑记录）
 ```
 
 ## 写一篇新文章
@@ -38,7 +31,7 @@ blog/
 见 `docs/OPS.md` 的 SOP-02。要点：
 
 - 文件放 `content/posts/YYYY-MM-DD-slug.md`
-- front matter 必填 `title` / `date`，按需填 `tags` / `summary` / `cover` / `comments`
+- front matter 必填 `title` / `date`，按需填 `tags` / `summary` / `cover`
 - 配图先压到 ≤ 300 KB，放 `static/images/<日期>/`
 - push 到 `main` 即发布
 
@@ -49,29 +42,40 @@ blog/
 
 ## 评论
 
-- 读者提交 → 进待审 → 站长在 `/admin/` 审核后公开（D-11）
-- 反垃圾：限流 + 长度校验 + 敏感词标记 + 输出转义（7.4）
-- 数据可导出（C-10），邮箱与 IP 不外泄（NFR-016）
-- 评论接口挂了会隐藏评论区，正文照常可读（C-12）
+**本期关闭。** GitHub Pages 只托管静态文件，没有运行时后端，评论接口无处部署。
+`hugo.toml` 里 `[params.comments] enabled = false`，主题因此不渲染评论区、也不发起任何请求。
+
+历史实现（Cloudflare Functions + D1，先审后发）保留在 git 历史中，需要时再单独恢复为独立后端。
 
 ## 本地开发与验证
 
 ```bash
-hugo server              # 日常写作预览 http://localhost:1313（brew 的 0.168.0）
-hugo147 --minify         # 发布前验证：与 Cloudflare 同版本，期望 15 页且无 WARN/ERROR
-node tests/comments.test.mjs   # 评论接口冒烟测试，15 条断言
+hugo server          # 日常写作预览 http://localhost:1313（brew 的 0.168.0）
+hugo147 --minify     # 发布前验证：与 Actions 同版本，期望 15 页且无 WARN/ERROR
 ```
 
-> **两个 hugo 并存是有意为之**：Cloudflare 构建镜像默认 Hugo 是 **0.147.7**，比本地 brew 装的
-> 0.168.0 旧，旧版会多出已移除的语法限制（曾因 `paginate` 直接构建失败）。
-> **推送前一定要用 `hugo147` 验一遍**，用 `hugo` 验过不代表云端能过。
+> **两个 hugo 并存是有意为之**：`.github/workflows/hugo.yml` 固定使用 **0.147.7**，
+> 本地 brew 装的 0.168.0 更新，旧版有已移除的语法限制（曾因 `paginate` 直接构建失败）。
+> **推送前一定要用 `hugo147` 验一遍**，用 `hugo` 验过不代表线上能过。
 
-> 注意时区：只写 `date: YYYY-MM-DD` 的文章，在 UTC 下可能被判为"未来内容"而整篇不产出。
-> `hugo.toml` 已设 `buildFuture = true` 规避，详见 `.cloudflare/README.md`。
+> 注意时区：只写 `date: YYYY-MM-DD` 的文章，在 UTC 下可能被判为“未来内容”而整篇不产出。
+> `hugo.toml` 已设 `buildFuture = true` 规避。
 
-## 首次部署前必须替换
+## 发布
 
-- `hugo.toml` 的 `baseURL`
-- `static/robots.txt` 的 Sitemap 域名
+push 到 `main` → GitHub Actions 自动构建 → 部署到 GitHub Pages。
+日常发布全程不需要打开 GitHub 网页，详见 `docs/DEPLOY.md`。
 
-（~~`.cloudflare/README.md` 的 `HUGO_VERSION`~~ 已实测为 `0.168.0`，无需再改）
+## 一次性配置（上线前需在 GitHub 完成）
+
+- [ ] 仓库名与账号一致：`me4po/me4po.github.io`，且为**公开**仓库
+- [ ] Settings → Pages → Source 选 **GitHub Actions**
+- [x] `hugo.toml` 的 `baseURL` → `https://me4po.github.io/`
+- [x] `static/robots.txt` 的 Sitemap 域名 → 已填
+- [x] `.github/workflows/hugo.yml` 固定 Hugo `0.147.7`
+
+## 为什么不跑在 Cloudflare
+
+`me4po.github.io` 是 GitHub Pages 的专属域名，只有 GitHub 能提供；Cloudflare 无法在该域名出内容，
+也没有在线编辑器或 git 托管能力。因此发布链路从 Cloudflare 整体迁回 GitHub Pages，
+决策与代价见 PRD v1.3 的 D-14、D-15。

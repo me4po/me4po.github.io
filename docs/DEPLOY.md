@@ -1,370 +1,150 @@
-# 部署手册：GitHub → Cloudflare Pages → 评论上线
+# 部署手册：GitHub Pages + GitHub Actions
 
-> 适用于本仓库当前状态（commit `dbcbabd`）。所有要填的值都写在下面，照抄即可。
-> 全程约 20–30 分钟。**先做第 0 步**，否则后面会返工。
-
----
-
-## 0. 开工前先做这两件事（1 分钟）
-
-### 0.1 生成一个审核口令
-
-在本机终端执行，把输出的字符串**单独存好**（后面要填两次）：
-
-```bash
-openssl rand -hex 32
-```
-
-这个口令 = 评论审核权限。泄露等于别人能删你的评论，但**不会**泄露文章内容。
-
-### 0.2 确认控制台能打开
-
-浏览器访问 <https://dash.cloudflare.com> 并登录。
-
-> 如果打不开：这是 PRD 里的 A-06 假设（Cloudflare 控制台国内可达性）验证失败。
-> 改用附录 B 的 wrangler CLI 方式完成 D1 与环境变量部分；Pages 项目本身仍需一次控制台操作。
+> 目标：对外站点为 <https://me4po.github.io/>，日常写作与提交在本地完成，
+> 构建由 GitHub Actions 在服务端执行，**不需要打开 GitHub 网页**。
+> 一次性配置约 10 分钟；之后每次发布 1～2 分钟。
 
 ---
 
-## 1. 创建 Pages 项目（Git 集成）
+## 0. 先搞清楚为什么是这个形态
 
-1. 打开 <https://dash.cloudflare.com/?to=/:account/workers-and-pages>
-2. 右上角 **Create** → 切到 **Pages** 标签页 → **Connect to Git**
-   - ⚠️ Cloudflare 现在默认引导 **Workers**。**务必切到 Pages 标签**，别建错。
-   - 本项目用 `functions/` 文件路由，Pages 原生支持；Workers 需要额外编译步骤（见附录 A）。
-3. **Connect GitHub** → 授权 → 选择仓库 `me4po/blog`
-   - 如果列表里看不到：点 **Configure GitHub App**，把 `me4po/blog` 加进授权范围。
-4. 进入 **Set up builds and deployments** 页面，按下表填：
-
-| 字段 | 填什么 |
+| 需求 | 现实约束 |
 | --- | --- |
-| Project name | `blog`（会成为 `blog.pages.dev`） |
-| Production branch | `main` |
-| Framework preset | `Hugo` |
-| Build command | `hugo --minify` |
-| Build output directory | `public` |
-| Root directory | **留空** |
-| **Deploy command** | **必须是空的** ⚠️（见下方说明） |
+| 对外地址是 `me4po.github.io` | 该域名属于 GitHub Pages，只有 GitHub 能提供内容，Cloudflare 无法接管 |
+| 不想经常打开 GitHub 网页 | 构建放 GitHub Actions（服务端跑）；提交用本地 `git push`；网页只在一次性开 Pages 时需要 |
+| 不装本地构建环境 | 本地只装 Git（必需）与可选的 Hugo（预览用）；正式构建在云端 |
 
-5. 点 **Save and Deploy**。
-
-### ⚠️ Deploy command 一定不能填（已踩坑）
-
-如果这里出现 `npx wrangler deploy`（部分流程会默认填上），构建会成功、部署会失败：
-
-```
-Success: Build command completed
-Executing user deploy command: npx wrangler deploy
-✘ [ERROR] ... unable to automatically configure your project,
-  since multiple frameworks were found: Hugo, Zola.
-Failed: error occurred while running deploy command
-```
-
-**原因**：`npx wrangler deploy` 在没有 wrangler 配置文件的目录里会启动**自动框架探测**，
-而 `config.toml` 同时也是 Zola 的指纹文件（Hugo 与 Zola 都用这个文件名），
-于是它同时认出 Hugo 和 Zola，直接罢工。
-
-**两个修法，都要做：**
-
-1. **主修：把 Deploy command 清空。**
-   Settings → Builds & deployments → Build configuration → Deploy command 清空保存。
-   Pages Git 集成的正常形态**只有 Build command**，部署由 Pages 自动完成
-   （`functions/` 目录也会被自动识别部署为 Pages Functions —— 评论功能靠的就是这个）。
-2. **仓库侧：配置文件已从 `config.toml` 改名为 `hugo.toml`。**
-   Hugo 优先读取 `hugo.toml`，而 Zola 只认 `config.toml`，改名后框架歧义消失。
-   （这也是 Hugo 官方现在的推荐命名。）
-
-> 若控制台不允许清空 Deploy command，就必须在仓库提供 `wrangler.jsonc` 来跳过自动配置。
-> 但那条路会让 `functions/` **不会**被自动部署，需额外执行
-> `npx wrangler pages functions build` 并把 `main` 指进去 —— 会显著复杂化，**能清空就清空**。
+因此 Cloudflare 从发布链路中整体移除：`wrangler.jsonc`、`functions/`、`schema.sql`、
+评论审核台与 D1 绑定均已删除（实现保留在 git 历史里）。评论本期关闭。
 
 ---
 
-## 2. 固定 Hugo 版本（关键，别跳过）
+## 1. 仓库要求（一次性）
 
-Cloudflare 构建镜像默认 Hugo 是 **0.147.7**（比本地 brew 装的 0.168.0 旧），
-而且旧版本会**多出一些已移除的语法限制**。所以必须固定版本，并在本地用同版本验证。
+1. 仓库名必须是 **`me4po.github.io`**（与账号名一致的用户站，URL 才会是根路径 `https://me4po.github.io/`）。
+2. 仓库必须**公开**。GitHub Free 的 Pages 只对公开仓库开放。
+3. 账号邮箱需已验证（Pages 的前置条件）。
 
-1. 进项目 → **Settings** → **Environment variables** → **Add**
-2. 按下表加一条（Production 和 Preview 都勾上）：
+> 若仓库现在叫 `me4po/blog`：Settings → General → Repository name 直接改名即可，提交历史会保留。
+> 本地 remote 随后改为 `https://github.com/me4po/me4po.github.io.git`。
 
-| Variable name | Value |
-| --- | --- |
-| `HUGO_VERSION` | `0.147.7` |
+## 2. 开启 Pages（一次性，需要打开 GitHub 网页）
 
-3. **必须重新部署才会生效** —— 保存环境变量不会触发构建：
-   **Deployments** → 最新一条右侧 `···` → **Retry deployment**
-4. 生效验证：新构建日志里应出现 `hugo v0.147.7`。**若显示的还是别的版本，说明没生效**，回头检查第 2、3 步。
+1. 仓库 → **Settings** → **Pages**
+2. **Build and deployment** → Source 选 **GitHub Actions**
+3. 不需要选分支、不需要填目录（工作流自己上传产物）
 
-本地对齐版本（已装好，发布前用它）：
+> 这是整条链路里唯一必须打开 GitHub 网页的步骤。如果当时打不开，换网络或等可达时再做；
+> 未开启前，Actions 的部署步骤会报 `Get Pages site failed`。
 
-```bash
-hugo147 --minify      # 与 Cloudflare 同版本；期望 15 页、无 WARN/ERROR
-```
-
-日常写作用 `hugo server`（brew 的 0.168.0）即可，两者配置兼容。
-
-> **已踩过的坑**：`paginate = 10` 在 Hugo 0.128 废弃、后续版本移除，
-> 在 Cloudflare 的 0.147.7 上是 **ERROR**（不是警告），直接构建失败。
-> 已改为 `pagination.pagerSize = 10`。同理 `languageCode` 保留旧写法是为了兼容 0.147.7。
-
----
-
-## 3. 首次构建成功的标志
-
-**Deployments** 里出现绿色 **Success**，日志末尾应类似：
-
-```
-Pages            15
-Total in 4x ms
-Success: Your site was deployed!
-```
-
-点开 `blog.pages.dev` 能看到终端风首页，即成功。
-
-如果失败：直接跳到第 9 节故障排查。
-
----
-
-## 4. 回填真实域名（必须做，否则图片/链接全是错的）
-
-拿到真实域名（如 `blog.pages.dev`）后，改仓库里的两个占位符：
-
-**`hugo.toml` 第 1 行**
-
-```toml
-baseURL = "https://blog.pages.dev/"     # 换成你的真实域名
-```
-
-**`static/robots.txt` 最后一行**
-
-```
-Sitemap: https://blog.pages.dev/sitemap.xml
-```
-
-然后推送，触发第二次构建：
+## 3. 首次推送
 
 ```bash
 cd /Users/jacobjhs/cs/blogger/blog
+git remote set-url origin https://github.com/me4po/me4po.github.io.git
 git add -A
-git commit -m "chore: 回填真实域名"
-git push
+git commit -m "feat: 迁移到 GitHub Pages + Actions，关闭评论，移除 Cloudflare 依赖"
+git push -u origin main
 ```
 
-> 注意结尾的 `/`。`baseURL` 少了尾斜杠，Hugo 的绝对链接会拼错。
+推送后进入仓库 **Actions** 页可看构建；也可以完全不看，等 1～2 分钟后直接访问站点。
 
----
-
-## 5. 创建 D1 数据库
-
-1. 左侧 **Storage & Databases** → **D1 SQL Database** → **Create**
-2. Database name：`blog-comments`
-3. Location：选 **Automatic**（或离你近的亚太区），**创建后不可改**
-4. 创建完成后，记下页面上的 **Database ID**（备用）
-
----
-
-## 6. 建表
-
-1. 进刚建的 `blog-comments` → **Console** 标签页
-2. 把仓库根目录 `schema.sql` 的**全部内容**粘贴进去
-3. 点 **Execute**
-
-验证：在同一个 Console 里执行
-
-```sql
-SELECT name FROM sqlite_master WHERE type='table';
-```
-
-应返回 `comments`。
-
-> `schema.sql` 里已含 3 个索引，**不要删**。D1 免费档按"扫描行数"计费，
-> 没索引的全表扫描会几倍消耗额度。
-
----
-
-## 7. 把 D1 绑到 Pages 项目
-
-1. 回 **Workers & Pages** → 选 `blog` 项目
-2. **Settings** → **Bindings** → **Add** → **D1 database bindings**
-3. 填：
-
-| 字段 | 值 |
-| --- | --- |
-| Variable name | `DB`（**必须一字不差**，代码里读的是 `env.DB`） |
-| D1 database | `blog-comments` |
-
-4. 保存。
-
----
-
-## 8. 设置审核口令
-
-同一个项目 → **Settings** → **Environment variables** → **Add**
-
-| Variable name | Value |
-| --- | --- |
-| `COMMENT_ADMIN_TOKEN` | 第 0.1 步生成的 64 位字符串 |
-
-Production 和 Preview 都勾上。建议点 **Encrypt**（作为 secret 存储）。
-
----
-
-## 9. 重新部署（最容易被漏掉的一步）
-
-> ⚠️ **绑定和环境变量都不会自动生效**，必须重新部署一次。
-
-**Deployments** → 最新一条 → `···` → **Retry deployment**
-
-或者推一个空提交：
+**GitHub 网页打不开时**：HTTP 代理不稳定会让 `git push` 报 `CONNECT tunnel failed`。
+优先改用 SSH over 443（对应 PRD SOP-03 的降级路径）：
 
 ```bash
-git commit --allow-empty -m "chore: 触发重新部署以生效 D1 绑定"
-git push
+# ~/.ssh/config
+Host github.com
+  Hostname ssh.github.com
+  Port 443
+  User git
+
+git remote set-url origin git@github.com:me4po/me4po.github.io.git
 ```
 
----
+## 4. 构建流程（`.github/workflows/hugo.yml`）
 
-## 10. 验收清单（逐条打勾）
+```
+push main
+  → checkout
+  → 安装 Hugo 0.147.7（与本地 hugo147 同版本）
+  → actions/configure-pages 读取站点元信息
+  → hugo --minify --baseURL https://me4po.github.io/
+  → upload-pages-artifact（上传 public/）
+  → deploy-pages（发布到 Pages）
+```
 
-把 `<域名>` 和 `<TOKEN>` 换成真实值，在终端执行。
+要点：
 
-### 10.1 静态站点
+- **版本固定 0.147.7**：本地 `hugo147` 与线上一致，避免“本地能构建、线上报错”。
+- Hugo 构建在云端，本地无需安装 Hugo 也能发布。
+- `public/` 已在 `.gitignore`，不进入仓库。
+- 时区：Actions 按 UTC 构建，`hugo.toml` 的 `buildFuture = true` 已规避“当天文章被判为未来”。
+- 构建失败可在仓库 **Actions** 页看日志；同一页也有 **Re-run jobs**。
+
+## 5. 验收
 
 ```bash
-DOMAIN=https://blog.pages.dev
+DOMAIN=https://me4po.github.io
 
 curl -s -o /dev/null -w "首页      %{http_code}\n" $DOMAIN/
 curl -s -o /dev/null -w "文章页    %{http_code}\n" $DOMAIN/posts/2026-10-21-hello-terminal/
 curl -s -o /dev/null -w "归档      %{http_code}\n" $DOMAIN/archives/
+curl -s -o /dev/null -w "关于      %{http_code}\n" $DOMAIN/about/
 curl -s -o /dev/null -w "sitemap   %{http_code}\n" $DOMAIN/sitemap.xml
-curl -s -o /dev/null -w "审核台    %{http_code}\n" $DOMAIN/admin/
+curl -s -o /dev/null -w "robots    %{http_code}\n" $DOMAIN/robots.txt
+curl -s -o /dev/null -w "404页     %{http_code}\n" $DOMAIN/no-such-page/
 ```
 
-期望全部 `200`。
+预期：前六项 `200`，404 页返回 `404`（内容为终端风格页面）。
 
-### 10.2 评论接口（未绑定 D1 时会是 500，属正常降级）
+- [ ] 首页样式正常，CSS 不是 404
+- [ ] sitemap.xml 里的链接是 `https://me4po.github.io/...`
+- [ ] 文章页不显示评论区，浏览器 Network 里没有 `/api/comments` 请求
+- [ ] 手机宽度下无横向滚动
 
-```bash
-# 读评论（应当 200 + 空数组）
-curl -s "$DOMAIN/api/comments?slug=2026-10-21-hello-terminal"
+## 6. 日常发布
 
-# 提交一条测试评论（应当 201）
-curl -s -X POST "$DOMAIN/api/comments" \
-  -H 'content-type: application/json' \
-  -d '{"slug":"2026-10-21-hello-terminal","nickname":"测试","content":"这是一条测试评论"}'
+1. 本地编辑 `content/posts/YYYY-MM-DD-slug.md`，配图放 `static/images/<日期>/`。
+2. 发布前自检：`hugo147 --minify`（期望 15 页且无 WARN/ERROR）。
+3. `git add -A && git commit -m "post: 标题" && git push`。
+4. 等 1～2 分钟刷新站点。
 
-# 再读一次：应仍是空数组 —— 因为先审后发（D-11）
-curl -s "$DOMAIN/api/comments?slug=2026-10-21-hello-terminal"
-```
+想在本机先看效果就 `hugo server`，浏览器打开 `http://localhost:1313`。
 
-### 10.3 审核台
-
-浏览器打开 `https://blog.pages.dev/admin/`：
-
-- [ ] 填入 `COMMENT_ADMIN_TOKEN` → 能看到刚才那条"测试"评论在**待审**列表
-- [ ] 点 **放行** → 刷新文章页，评论出现
-- [ ] 试一次"导出"，能下载 JSON（这条满足 C-10 可导出）
-
-### 10.4 降级验证（C-12）
-
-评论区在接口报错时应当隐藏、正文照常可读。可用错误 slug 触发或临时解绑 D1 观察。
-
----
-
-## 11. 开启构建失败通知（NFR-010）
-
-构建失败是静默的，没有通知你根本不知道。
-
-**Notifications**（账户级）→ **Add** → 选 **Cloudflare Pages** → 事件勾 **Deployment failed** → 送达方式 **Email**
-
-或者走 Workers 的 Observability，但 Pages 用 Notifications 最简单。
-
----
-
-## 12. 故障排查
+## 7. 故障排查
 
 | 现象 | 原因 | 处理 |
 | --- | --- | --- |
-| 构建日志报 `hugo: command not found` 或版本相关 | `HUGO_VERSION` 未设或没生效 | 回到第 2 步，并看日志确认版本行 |
-| `ERROR deprecated: site config key paginate was deprecated ... and subsequently removed` | config 用了 `paginate`（0.128 废弃、后续移除，云端是 ERROR 不是 WARN） | 已修为 `pagination.pagerSize = 10`；若还出现说明本地改动没推上去 |
-| `multiple frameworks were found: Hugo, Zola` | 项目设了 Deploy command `npx wrangler deploy`，触发 wrangler 自动框架探测；`config.toml` 同时是 Zola 的指纹文件 | **清空 Deploy command**（Settings → Builds & deployments → Build configuration）；仓库侧已改名 `hugo.toml` |
-| Hugo 构建成功但整个部署 Failed | 同上——Build 阶段和 Deploy 阶段是分开的，别被 `Success: Build command completed` 骗了 | 同上 |
-| 构建成功但页面 404 / sitemap 里没这篇文章 | **时区陷阱**：UTC 构建下 `date: 2026-10-21` 在北京 08:00 前属"未来" | `hugo.toml` 已设 `buildFuture = true`；若被删了就加回来 |
-| `/api/comments` 返回 `DB not bound` | D1 没绑或绑完没重新部署 | 第 7 步 + 第 9 步 |
-| `/admin/` 一直 401 | token 不一致，或没重新部署 | 检查环境变量值两端是否一致（注意别带空格） |
-| `/api/comments/moderate` 404 | `functions/api/comments.js` 与 `functions/api/comments/` 目录路由冲突 | 把 `comments.js` 改名为 `comments/index.js`，同时把里面的 `'../lib/'` 改成 `'../../lib/'`，重新部署 |
-| 部署成功但样式全丢 | `baseURL` 没尾斜杠，或 CSS 路径错 | 第 4 步 |
-| 文章推上去了但没出现 | 同"时区陷阱"；或 front matter 语法错 | 看构建日志 |
+| Actions 报 `Get Pages site failed` / `Not Found` | Pages 没开启，或 Source 不是 GitHub Actions | 回第 2 步 |
+| 工作流没触发 | 推送的不是 `main`，或 Actions 被禁用 | 确认分支；仓库 Settings → Actions 允许运行 |
+| 构建报 `paginate was deprecated...` | Hugo 版本不是 0.147.7 | 检查工作流里的 `HUGO_VERSION`，本地用 `hugo147` 验证 |
+| 站点 404 | 仓库名不是 `me4po.github.io`，或 Pages 未部署成功 | 改名 + 看 Actions 日志 |
+| 页面能开但样式全丢 | 构建时 `baseURL` 不对 | 工作流已传 `--baseURL`；确认 `hugo.toml` 的 `baseURL` 也是 `https://me4po.github.io/` |
+| 文章推上去了但页面没有 | 时区：UTC 下当天日期属“未来” | `buildFuture = true` 已开；或 front matter 写完整时间 |
+| `git push` 报 `CONNECT tunnel failed 502` | 本地代理故障 | 检查代理；或改走 SSH 443（第 3 步） |
+| 改了配置但站点没变 | 那次 commit 没推上去，或构建失败 | `git log origin/main..HEAD` 确认；看 Actions |
 
----
+## 8. 回滚
 
-## 附录 A：如果控制台里找不到 Pages 创建入口
+- **内容错误**：`git revert <commit>` 后 push，Actions 自动重新部署。
+- **部署异常**：Actions 里对上一次成功的 run 点 **Re-run jobs**；Pages 没有 Cloudflare 那种一键 Rollback。
+- **工作流改坏**：先恢复 `.github/workflows/hugo.yml` 的历史版本，再 push。
 
-Cloudflare 正在把 Pages 往 Workers 收。若 **Create** 里已经没有 Pages 标签（说明 D-07 的迁移触发条件已满足），走 Workers 路线：
+## 9. 网络受限时的预期
 
-1. **Workers & Pages** → **Create** → **Workers** → **Connect to Git**（Workers Builds）
-2. 构建命令 `hugo --minify`，输出目录填 `public`
-3. 需要一个 `wrangler.jsonc`：
+- `github.io` 与 `github.com` 是不同域名，前者当前可达，不等于后者可达；两者都可能波动。
+- 构建在 GitHub 服务端执行，不占用你的网络；只有 `git push` 需要你能连上 GitHub（HTTPS 或 SSH 443）。
+- 若某段时间两者都不通，属于 PRD SOP-06 的降级场景：先本地写好文章，网络恢复后一次性推送。
 
-```jsonc
-{
-  "name": "blog",
-  "compatibility_date": "2026-10-20",
-  "assets": { "directory": "./public", "not_found_handling": "404-page" }
-}
-```
+## 附录：GitHub Pages 免费额度（GitHub Free）
 
-4. Pages Functions 的 `functions/` 目录 Workers **不直接支持**（兼容性矩阵标 🟡），需要编译：
+| 项 | 限制 |
+| --- | --- |
+| 站点大小 | 1 GB |
+| 月流量（软限制） | 100 GB |
+| 构建 | 公开仓库 Actions 免费；每仓库每小时软限制 10 次 |
+| 私有仓库 Pages | 不支持（需 GitHub Pro 及以上） |
+| 自定义域名 / HTTPS | 支持；本站不需要 |
 
-```bash
-npx wrangler pages functions build --outdir=./dist/worker/
-```
-
-然后在 `wrangler.jsonc` 里加 `"main": "./dist/worker/index.js"`，并把构建命令改成
-`hugo --minify && npx wrangler pages functions build --outdir=./dist/worker/`。
-
-> 这条路明显更绕。**只要 Pages 还能建，就用 Pages。**
-
----
-
-## 附录 B：用 wrangler CLI 代替控制台（可脚本化，也适合控制台打不开时）
-
-```bash
-cd /Users/jacobjhs/cs/blogger/blog
-
-npx wrangler login                                   # 浏览器授权
-
-npx wrangler d1 create blog-comments                 # 建库，输出里会有 database_id
-npx wrangler d1 execute blog-comments --remote --file=./schema.sql   # 建表
-
-npx wrangler pages secret put COMMENT_ADMIN_TOKEN    # 设置审核口令（交互式输入）
-npx wrangler pages deployment list                   # 查看部署
-npx wrangler pages deployment tail                   # 实时看 Functions 日志（排错利器）
-```
-
-`deployment tail` 是排查评论接口 500 最快的手段，控制台看不到 Functions 的运行时错误。
-
----
-
-## 附录 C：免费额度与本次部署的消耗（2026-10 核实）
-
-| 项 | 免费额度 | 本站预估 |
-| --- | --- | --- |
-| 构建 | 500 次/月，1 并发，20 分钟超时 | 每月 < 10 次 |
-| 带宽 / 请求 | 不限 | — |
-| Pages Functions | 100,000 请求/天（00:00 UTC 重置） | 每篇文章一次评论拉取；日均几百次 |
-| D1 行读取 | 5,000,000 /天 | 索引命中，每次查询几十行 |
-| D1 行写入 | 100,000 /天 | 一天几十条评论 |
-| D1 存储 | 5 GB | 远不到 |
-
-额度瓶颈是 Functions 的 10 万请求/天，个人博客远远碰不到。**费用应为 0**。
-
-每月核对一次 Billing，并更新 `.cloudflare/README.md` 的台账。
-
----
-
-## 完成后请回填
-
-- [ ] `.cloudflare/README.md` 第 2 节的额度台账（Workers / D1 两行）
-- [ ] 把真实域名同步进 `docs/OPS.md` 的 SOP-08（审核台地址）
+费用应为 0 元。

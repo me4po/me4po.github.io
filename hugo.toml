@@ -1,7 +1,7 @@
-baseURL = "https://REPLACE-ME.pages.dev/"
+baseURL = "https://me4po.github.io/"
 # languageCode 是 ≤0.157 的写法（0.158+ 改用 locale，这里是 WARN 不是 ERROR）。
-# 保留旧写法是为了兼容 Cloudflare Pages 的默认 Hugo 0.147.7；若哪天把 HUGO_VERSION
-# 固定到 0.158+ 并确认生效，可换成 locale = "zh-CN"。
+# 保留旧写法是为了与 .github/workflows/hugo.yml 里固定的 Hugo 0.147.7 保持一致；
+# 若把版本升到 0.158+ 并确认生效，可换成 locale = "zh-CN"。
 languageCode = "zh-CN"
 hasCJKLanguage = true
 title = "TERMINAL // LOG"
@@ -12,7 +12,7 @@ pagination.pagerSize = 10
 enableRobotsTXT = false
 enableGitInfo = false
 
-# 时区陷阱修复：Cloudflare 构建机按 UTC 运行。
+# 时区陷阱修复：GitHub Actions 构建机按 UTC 运行。
 # 北京时间 08:00 之前发布、front matter 里只写当天日期（如 date: 2026-10-21）的文章，
 # 其 publishDate 是 2026-10-21T00:00:00Z，在 UTC 下仍属"未来"，Hugo 默认会跳过不产出。
 # 本站不做定时发布，故全局开启 buildFuture，避免"文章推上去了页面却没有"的诡异现象。
@@ -39,7 +39,11 @@ buildFuture = true
   themeToggle = false  # V-13
 
 [params.comments]
-  enabled = true
+  # GitHub Pages 是纯静态托管，没有运行时后端，评论接口无处部署。
+  # 关闭后主题不会渲染评论区，也不会发起 /api/comments 请求。
+  # 以后若接入独立评论服务（如 Cloudflare Worker），把 enabled 改回 true
+  # 并把 api / admin 页地址改成对应的绝对 URL。
+  enabled = false
   api = "/api/comments"
   pageSize = 50
   notice = "评论经站长审核后公开显示。请留下你的看法，不需要注册账号。"
