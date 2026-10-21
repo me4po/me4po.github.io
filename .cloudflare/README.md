@@ -36,7 +36,7 @@ Cloudflare Pages 构建镜像**默认 Hugo = 0.147.7**（v3 build image）。本
 
 Cloudflare 构建机按 **UTC** 运行。北京时间 08:00 之前发布、front matter 只写当天日期（如 `date: 2026-10-21`）的文章，其 `publishDate` 在 UTC 下仍是"未来"，Hugo 默认会整篇跳过——表现为"文章推上去了但页面 404"。
 
-`config.toml` 里已设 `buildFuture = true` 规避。本站不做定时发布，所以不要删这一行。若以后需要定时发布，改成"front matter 里写完整时间（如 `2026-10-21T20:00:00+08:00`）"并移除该配置。
+`hugo.toml` 里已设 `buildFuture = true` 规避。本站不做定时发布，所以不要删这一行。若以后需要定时发布，改成"front matter 里写完整时间（如 `2026-10-21T20:00:00+08:00`）"并移除该配置。
 
 ## 3. 评论运行时（D-10 / CM-05）
 

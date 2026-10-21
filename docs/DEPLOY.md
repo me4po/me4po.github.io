@@ -44,8 +44,39 @@ openssl rand -hex 32
 | Build command | `hugo --minify` |
 | Build output directory | `public` |
 | Root directory | **留空** |
+| **Deploy command** | **必须是空的** ⚠️（见下方说明） |
 
 5. 点 **Save and Deploy**。
+
+### ⚠️ Deploy command 一定不能填（已踩坑）
+
+如果这里出现 `npx wrangler deploy`（部分流程会默认填上），构建会成功、部署会失败：
+
+```
+Success: Build command completed
+Executing user deploy command: npx wrangler deploy
+✘ [ERROR] ... unable to automatically configure your project,
+  since multiple frameworks were found: Hugo, Zola.
+Failed: error occurred while running deploy command
+```
+
+**原因**：`npx wrangler deploy` 在没有 wrangler 配置文件的目录里会启动**自动框架探测**，
+而 `config.toml` 同时也是 Zola 的指纹文件（Hugo 与 Zola 都用这个文件名），
+于是它同时认出 Hugo 和 Zola，直接罢工。
+
+**两个修法，都要做：**
+
+1. **主修：把 Deploy command 清空。**
+   Settings → Builds & deployments → Build configuration → Deploy command 清空保存。
+   Pages Git 集成的正常形态**只有 Build command**，部署由 Pages 自动完成
+   （`functions/` 目录也会被自动识别部署为 Pages Functions —— 评论功能靠的就是这个）。
+2. **仓库侧：配置文件已从 `config.toml` 改名为 `hugo.toml`。**
+   Hugo 优先读取 `hugo.toml`，而 Zola 只认 `config.toml`，改名后框架歧义消失。
+   （这也是 Hugo 官方现在的推荐命名。）
+
+> 若控制台不允许清空 Deploy command，就必须在仓库提供 `wrangler.jsonc` 来跳过自动配置。
+> 但那条路会让 `functions/` **不会**被自动部署，需额外执行
+> `npx wrangler pages functions build` 并把 `main` 指进去 —— 会显著复杂化，**能清空就清空**。
 
 ---
 
@@ -99,7 +130,7 @@ Success: Your site was deployed!
 
 拿到真实域名（如 `blog.pages.dev`）后，改仓库里的两个占位符：
 
-**`config.toml` 第 1 行**
+**`hugo.toml` 第 1 行**
 
 ```toml
 baseURL = "https://blog.pages.dev/"     # 换成你的真实域名
@@ -256,8 +287,10 @@ curl -s "$DOMAIN/api/comments?slug=2026-10-21-hello-terminal"
 | 现象 | 原因 | 处理 |
 | --- | --- | --- |
 | 构建日志报 `hugo: command not found` 或版本相关 | `HUGO_VERSION` 未设或没生效 | 回到第 2 步，并看日志确认版本行 |
-| `ERROR deprecated: site config key paginate was deprecated ... and subsequently removed` | config 用了 `paginate` | 已修为 `pagination.pagerSize = 10`；若还出现说明本地改动没推上去 |
-| 构建成功但页面 404 / sitemap 里没这篇文章 | **时区陷阱**：UTC 构建下 `date: 2026-10-21` 在北京 08:00 前属"未来" | `config.toml` 已设 `buildFuture = true`；若被删了就加回来 |
+| `ERROR deprecated: site config key paginate was deprecated ... and subsequently removed` | config 用了 `paginate`（0.128 废弃、后续移除，云端是 ERROR 不是 WARN） | 已修为 `pagination.pagerSize = 10`；若还出现说明本地改动没推上去 |
+| `multiple frameworks were found: Hugo, Zola` | 项目设了 Deploy command `npx wrangler deploy`，触发 wrangler 自动框架探测；`config.toml` 同时是 Zola 的指纹文件 | **清空 Deploy command**（Settings → Builds & deployments → Build configuration）；仓库侧已改名 `hugo.toml` |
+| Hugo 构建成功但整个部署 Failed | 同上——Build 阶段和 Deploy 阶段是分开的，别被 `Success: Build command completed` 骗了 | 同上 |
+| 构建成功但页面 404 / sitemap 里没这篇文章 | **时区陷阱**：UTC 构建下 `date: 2026-10-21` 在北京 08:00 前属"未来" | `hugo.toml` 已设 `buildFuture = true`；若被删了就加回来 |
 | `/api/comments` 返回 `DB not bound` | D1 没绑或绑完没重新部署 | 第 7 步 + 第 9 步 |
 | `/admin/` 一直 401 | token 不一致，或没重新部署 | 检查环境变量值两端是否一致（注意别带空格） |
 | `/api/comments/moderate` 404 | `functions/api/comments.js` 与 `functions/api/comments/` 目录路由冲突 | 把 `comments.js` 改名为 `comments/index.js`，同时把里面的 `'../lib/'` 改成 `'../../lib/'`，重新部署 |

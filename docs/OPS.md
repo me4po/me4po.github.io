@@ -8,7 +8,7 @@
 1. GitHub 建仓库，把本目录所有文件推上去（`public/`、`resources/` 已 gitignore）。
 2. Cloudflare → Workers & Pages → Create → Pages → Connect to Git → 授权 → 选仓库。
 3. 按 `.cloudflare/README.md` 配置构建命令与环境变量。
-4. 部署成功后把 `config.toml` 的 `baseURL` 和 `static/robots.txt` 里的域名替换为真实 `xxx.pages.dev`。
+4. 部署成功后把 `hugo.toml` 的 `baseURL` 和 `static/robots.txt` 里的域名替换为真实 `xxx.pages.dev`。
 5. D1 建表（`schema.sql`），绑定变量 `DB`，设置 `COMMENT_ADMIN_TOKEN`。
 6. 开启部署通知邮件（构建失败兜底感知，NFR-010）。
 
@@ -35,7 +35,7 @@ draft: false
 
 > **发布后页面 404 / sitemap 里没有这篇文章**：先看是不是时区问题。
 > Cloudflare 按 UTC 构建，`date: 2026-10-21` 在北京时间 08:00 前仍属"未来"，Hugo 会跳过。
-> `config.toml` 已设 `buildFuture = true`；若仍想精确控制，front matter 写完整时间：
+> `hugo.toml` 已设 `buildFuture = true`；若仍想精确控制，front matter 写完整时间：
 > `date: 2026-10-21T20:00:00+08:00`。
 
 ## SOP-03 备用 / 降级发布

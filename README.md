@@ -8,7 +8,7 @@
 
 ```
 blog/
-├── config.toml                 站点配置（含视觉开关与评论开关）
+├── hugo.toml                  站点配置（含视觉开关与评论开关）
 ├── content/                    文章与页面
 │   ├── posts/                  文章（YYYY-MM-DD-slug.md）
 │   ├── about.md
@@ -44,7 +44,7 @@ blog/
 
 ## 视觉开关
 
-`config.toml` 的 `[params.effects]` 控制各项效果，默认只开克制档（V-01/02/03/04/05/08）。
+`hugo.toml` 的 `[params.effects]` 控制各项效果，默认只开克制档（V-01/02/03/04/05/08）。
 想要更浓就把 `scanlines` / `glitch` / `commandBar` / `themeToggle` 改成 `true`，改完记得跑一次性能与移动端检查（PRD 8.3 预算）。
 
 ## 评论
@@ -67,11 +67,11 @@ node tests/comments.test.mjs   # 评论接口冒烟测试，15 条断言
 > **推送前一定要用 `hugo147` 验一遍**，用 `hugo` 验过不代表云端能过。
 
 > 注意时区：只写 `date: YYYY-MM-DD` 的文章，在 UTC 下可能被判为"未来内容"而整篇不产出。
-> `config.toml` 已设 `buildFuture = true` 规避，详见 `.cloudflare/README.md`。
+> `hugo.toml` 已设 `buildFuture = true` 规避，详见 `.cloudflare/README.md`。
 
 ## 首次部署前必须替换
 
-- `config.toml` 的 `baseURL`
+- `hugo.toml` 的 `baseURL`
 - `static/robots.txt` 的 Sitemap 域名
 
 （~~`.cloudflare/README.md` 的 `HUGO_VERSION`~~ 已实测为 `0.168.0`，无需再改）
