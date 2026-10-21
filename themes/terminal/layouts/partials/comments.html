@@ -1,116 +1,30 @@
 {{ $commentsOn := true }}
 {{ if isset .Params "comments" }}{{ $commentsOn = .Params.comments }}{{ end }}
-{{ if and site.Params.comments.enabled $commentsOn }}
-{{ $slug := .Title | urlize }}{{ with .File }}{{ $slug = .TranslationBaseName }}{{ end }}
+{{ with site.Params.comments.giscus }}
+{{ if and site.Params.comments.enabled $commentsOn .repo_id .category_id }}
 
-<section class="comments" id="comments"
-  data-slug="{{ $slug }}"
-  data-api="{{ site.Params.comments.api }}"
-  data-page-size="{{ site.Params.comments.pageSize }}">
+<section class="comments" id="comments">
   <h2 class="comments-title">// 评论</h2>
-  <p class="comments-notice">{{ site.Params.comments.notice }}</p>
+  <p class="comments-notice">使用 GitHub 账号登录后评论；评论保存在本仓库的 Discussions 中。</p>
 
-  <div id="comment-list" class="loading">[■□□□] 加载评论…</div>
-
-  <form class="comment-form" id="comment-form">
-    <div class="field">
-      <label for="c-name">昵称（选填，默认「匿名访客」）</label>
-      <input id="c-name" name="nickname" maxlength="24" autocomplete="nickname" placeholder="anonymous">
-    </div>
-    <div class="field">
-      <label for="c-mail">邮箱（选填，不会公开展示）</label>
-      <input id="c-mail" name="email" type="email" maxlength="64" autocomplete="email" placeholder="you@example.com">
-    </div>
-    <div class="field">
-      <label for="c-body">内容（必填，2–1000 字）</label>
-      <textarea id="c-body" name="content" required maxlength="1000" placeholder="说点什么…"></textarea>
-    </div>
-    <button class="btn" type="submit" id="c-submit">提交</button>
-    <div class="form-status" id="c-status" role="status"></div>
-  </form>
+  <div class="giscus"></div>
+  <script src="https://giscus.app/client.js"
+    data-repo="{{ .repo }}"
+    data-repo-id="{{ .repo_id }}"
+    data-category="{{ .category }}"
+    data-category-id="{{ .category_id }}"
+    data-mapping="{{ .mapping }}"
+    data-strict="{{ .strict }}"
+    data-reactions-enabled="{{ .reactions_enabled }}"
+    data-emit-metadata="{{ .emit_metadata }}"
+    data-input-position="{{ .input_position }}"
+    data-theme="{{ .theme }}"
+    data-lang="{{ .lang }}"
+    data-loading="{{ .loading }}"
+    crossorigin="anonymous"
+    async>
+  </script>
 </section>
 
-<script>
-(function () {
-  var box = document.getElementById('comments');
-  if (!box) return;
-  var api = box.getAttribute('data-api');
-  var slug = box.getAttribute('data-slug');
-  var list = document.getElementById('comment-list');
-  var form = document.getElementById('comment-form');
-  var status = document.getElementById('c-status');
-  var btn = document.getElementById('c-submit');
-
-  function esc(s) {
-    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-    });
-  }
-  function fmt(ms) {
-    var d = new Date(ms);
-    function p(n) { return n < 10 ? '0' + n : '' + n; }
-    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
-  }
-  function render(items) {
-    if (!items.length) {
-      list.className = '';
-      list.innerHTML = '<div class="comment-head">还没有评论。来写第一条？</div>';
-      return;
-    }
-    list.className = '';
-    list.innerHTML = items.map(function (c) {
-      return '<div class="comment' + (c.parent_id ? ' reply' : '') + '">'
-        + '<div class="comment-head"><span class="comment-name">' + esc(c.nickname || '匿名访客') + '</span> · ' + esc(fmt(c.created_at)) + '</div>'
-        + '<p class="comment-body' + (c.is_admin ? ' admin' : '') + '">' + esc(c.content) + '</p>'
-        + '</div>';
-    }).join('');
-  }
-
-  // C-12：评论加载失败时隐藏整个评论区，正文不受影响
-  fetch(api + '?slug=' + encodeURIComponent(slug), { headers: { accept: 'application/json' } })
-    .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
-    .then(function (d) { render(d && d.comments ? d.comments : []); })
-    .catch(function () { if (box) box.style.display = 'none'; });
-
-  form.addEventListener('submit', function (e) {
-    e.preventDefault();
-    var body = document.getElementById('c-body').value.trim();
-    if (body.length < 2) {
-      status.className = 'form-status err';
-      status.textContent = '内容至少 2 个字';
-      return;
-    }
-    btn.disabled = true;
-    status.className = 'form-status';
-    status.textContent = '[■□□□] 提交中…';
-    fetch(api, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        slug: slug,
-        nickname: document.getElementById('c-name').value.trim(),
-        email: document.getElementById('c-mail').value.trim(),
-        content: body
-      })
-    })
-      .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
-      .then(function (res) {
-        btn.disabled = false;
-        if (res.ok) {
-          status.className = 'form-status ok';
-          status.textContent = '已提交，审核通过后公开显示。';
-          form.reset();
-        } else {
-          status.className = 'form-status err';
-          status.textContent = (res.d && res.d.error) || '提交失败，请稍后再试';
-        }
-      })
-      .catch(function () {
-        btn.disabled = false;
-        status.className = 'form-status err';
-        status.textContent = '网络异常，提交失败';
-      });
-  });
-})();
-</script>
+{{ end }}
 {{ end }}

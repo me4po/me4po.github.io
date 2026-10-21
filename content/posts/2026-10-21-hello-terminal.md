@@ -18,17 +18,17 @@ draft: false
 整条链路比想象中短：
 
 ```text
-浏览器里写 Markdown
+本地编辑器 / 浏览器（github.dev）里写 Markdown
     → push 到 GitHub
-        → Cloudflare Pages 云端构建
-            → CDN → 你正在看的这个页面
+        → GitHub Actions 云端构建
+            → GitHub Pages → 你正在看的这个页面
 ```
 
-本地不需要装任何东西。换一台电脑，登录账号就能继续写。
+正式构建在云端完成，本地不需要装 Hugo；换一台电脑，用浏览器打开 github.dev 就能继续写。
 
 ## 关于评论
 
-底部可以留言，不需要注册账号。为了不出乱子，评论会先到我这边过一遍再公开——所以你提交之后不会立刻看到它，这是设计如此，不是坏了。
+底部可以留言，需要登录 GitHub 账号，评论会保存在这个仓库的 Discussions 里。
 
 ## 接下来
 

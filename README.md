@@ -42,10 +42,13 @@ blog/
 
 ## 评论
 
-**本期关闭。** GitHub Pages 只托管静态文件，没有运行时后端，评论接口无处部署。
-`hugo.toml` 里 `[params.comments] enabled = false`，主题因此不渲染评论区、也不发起任何请求。
+使用 **Giscus**（基于 GitHub Discussions），零后端、零成本。读者需要登录 GitHub 账号才能发表，
+评论数据保存在本仓库的 Discussions 中，无需数据库、无需服务器。
 
-历史实现（Cloudflare Functions + D1，先审后发）保留在 git 历史中，需要时再单独恢复为独立后端。
+- 配置在 `hugo.toml` 的 `[params.comments.giscus]`
+- 单篇关闭：front matter 写 `comments: false`
+- 首次启用（需在 GitHub 网页完成）：仓库 Settings → 勾选 **Discussions** → 安装
+  [giscus App](https://github.com/apps/giscus) → 在 <https://giscus.app> 取 `category_id` 填入配置
 
 ## 本地开发与验证
 
@@ -70,12 +73,15 @@ push 到 `main` → GitHub Actions 自动构建 → 部署到 GitHub Pages。
 
 - [ ] 仓库名与账号一致：`me4po/me4po.github.io`，且为**公开**仓库
 - [ ] Settings → Pages → Source 选 **GitHub Actions**
+- [ ] Settings → General → Features 勾选 **Discussions**
+- [ ] 安装 giscus App，并把 `category_id` 填入 `hugo.toml`
 - [x] `hugo.toml` 的 `baseURL` → `https://me4po.github.io/`
 - [x] `static/robots.txt` 的 Sitemap 域名 → 已填
 - [x] `.github/workflows/hugo.yml` 固定 Hugo `0.147.7`
+- [x] Giscus 的 `repo` / `repo_id` / `category` 已填
 
 ## 为什么不跑在 Cloudflare
 
 `me4po.github.io` 是 GitHub Pages 的专属域名，只有 GitHub 能提供；Cloudflare 无法在该域名出内容，
 也没有在线编辑器或 git 托管能力。因此发布链路从 Cloudflare 整体迁回 GitHub Pages，
-决策与代价见 PRD v1.3 的 D-14、D-15。
+决策与代价见 PRD v1.4 的 D-14、D-16。

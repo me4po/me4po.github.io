@@ -14,8 +14,9 @@
 | 不想经常打开 GitHub 网页 | 构建放 GitHub Actions（服务端跑）；提交用本地 `git push`；网页只在一次性开 Pages 时需要 |
 | 不装本地构建环境 | 本地只装 Git（必需）与可选的 Hugo（预览用）；正式构建在云端 |
 
-因此 Cloudflare 从发布链路中整体移除：`wrangler.jsonc`、`functions/`、`schema.sql`、
-评论审核台与 D1 绑定均已删除（实现保留在 git 历史里）。评论本期关闭。
+因此 Cloudflare 从发布链路中整体移除：`wrangler.jsonc`、`functions/`、`schema.sql`
+与 D1 绑定均已删除（实现保留在 git 历史里）。评论改用 **Giscus**（GitHub Discussions），
+同样是纯静态前端、零服务器、零费用。
 
 ---
 
@@ -34,8 +35,22 @@
 2. **Build and deployment** → Source 选 **GitHub Actions**
 3. 不需要选分支、不需要填目录（工作流自己上传产物）
 
-> 这是整条链路里唯一必须打开 GitHub 网页的步骤。如果当时打不开，换网络或等可达时再做；
+> 这是整条链路里必须打开 GitHub 网页的步骤之一。如果当时打不开，换网络或等可达时再做；
 > 未开启前，Actions 的部署步骤会报 `Get Pages site failed`。
+
+## 2.1 开启评论（一次性，需要打开 GitHub 网页）
+
+Giscus 把评论存进仓库的 Discussions，不需要数据库或服务器。
+
+1. 仓库 → **Settings** → **General** → **Features** → 勾选 **Discussions**。
+2. 打开 <https://github.com/apps/giscus> → **Install** → 选择 `me4po/me4po.github.io`。
+3. 打开 <https://giscus.app/zh-CN>，填入仓库 `me4po/me4po.github.io`，分类选 **Announcements**，
+   页面会生成一段 `<script>`；把其中的 `data-repo-id` 和 `data-category-id` 填入
+   `hugo.toml` 的 `[params.comments.giscus]`。
+4. push 后文章底部出现评论区。未登录可以阅读，发表评论需要 GitHub 账号。
+
+> 分类建议用 **Announcements**：只有维护者能新建讨论，读者只能评论，避免仓库 Discussions 被随意开帖。
+> 换分类时 `category` 和 `category_id` 要同时改。
 
 ## 3. 首次推送
 
@@ -43,7 +58,7 @@
 cd /Users/jacobjhs/cs/blogger/blog
 git remote set-url origin https://github.com/me4po/me4po.github.io.git
 git add -A
-git commit -m "feat: 迁移到 GitHub Pages + Actions，关闭评论，移除 Cloudflare 依赖"
+git commit -m "feat: 迁移到 GitHub Pages + Actions，接入 Giscus 评论"
 git push -u origin main
 ```
 
@@ -100,7 +115,8 @@ curl -s -o /dev/null -w "404页     %{http_code}\n" $DOMAIN/no-such-page/
 
 - [ ] 首页样式正常，CSS 不是 404
 - [ ] sitemap.xml 里的链接是 `https://me4po.github.io/...`
-- [ ] 文章页不显示评论区，浏览器 Network 里没有 `/api/comments` 请求
+- [ ] 文章页显示评论区；未登录时能看到评论列表和 GitHub 登录入口
+- [ ] 浏览器 Network 里 `giscus.app/client.js` 返回 200，没有 `/api/comments` 请求
 - [ ] 手机宽度下无横向滚动
 
 ## 6. 日常发布
@@ -122,6 +138,10 @@ curl -s -o /dev/null -w "404页     %{http_code}\n" $DOMAIN/no-such-page/
 | 站点 404 | 仓库名不是 `me4po.github.io`，或 Pages 未部署成功 | 改名 + 看 Actions 日志 |
 | 页面能开但样式全丢 | 构建时 `baseURL` 不对 | 工作流已传 `--baseURL`；确认 `hugo.toml` 的 `baseURL` 也是 `https://me4po.github.io/` |
 | 文章推上去了但页面没有 | 时区：UTC 下当天日期属“未来” | `buildFuture = true` 已开；或 front matter 写完整时间 |
+| 评论区完全不显示 | `category_id` 为空、Discussions 未开启，或 giscus App 未安装 | 回第 2.1 步；`hugo.toml` 里 `enabled` 应为 `true` |
+| 评论框提示 `giscus is not installed` | giscus App 没授权到本仓库 | 在 giscus App 的 Install 页面补选该仓库 |
+| 评论区加载慢或空白 | `giscus.app` 不可达 | 换网络重试；评论不影响正文 |
+| 读者无法发表评论 | 未登录 GitHub | 设计如此，登录后即可 |
 | `git push` 报 `CONNECT tunnel failed 502` | 本地代理故障 | 检查代理；或改走 SSH 443（第 3 步） |
 | 改了配置但站点没变 | 那次 commit 没推上去，或构建失败 | `git log origin/main..HEAD` 确认；看 Actions |
 

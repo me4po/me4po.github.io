@@ -7,8 +7,11 @@
 
 1. 仓库满足三个条件：名为 `me4po.github.io`、公开、账号邮箱已验证。
 2. 仓库 → Settings → Pages → Source 选 **GitHub Actions**。
-3. 本地 `git push` 到 `main`，工作流自动构建并部署。
-4. 用 `docs/DEPLOY.md` 第 5 节验收。
+3. 仓库 → Settings → General → Features 勾选 **Discussions**；安装
+   [giscus App](https://github.com/apps/giscus)，在 <https://giscus.app> 取 `category_id`
+   填入 `hugo.toml`（详见 `docs/DEPLOY.md` 第 2.1 节）。
+4. 本地 `git push` 到 `main`，工作流自动构建并部署。
+5. 用 `docs/DEPLOY.md` 第 5 节验收。
 
 ## SOP-02 日常发布（主路径）
 
@@ -81,19 +84,24 @@ hugo147 --minify     # 与 Actions 同版本；应无 WARN/ERROR
 
 连续 2 次修不好就先回滚（SOP-05），保证站点可用优先。
 
-## SOP-08 评论审核（本期关闭）
+## SOP-08 评论管理（Giscus）
 
-评论功能已随 Cloudflare 后端一并关闭：
+评论数据存放在本仓库的 **Discussions**（分类 `Announcements`），没有独立数据库。
 
-- `hugo.toml` 的 `[params.comments] enabled = false`，页面不渲染评论区。
-- 原 `functions/`、`schema.sql`、审核台已从仓库移除，实现可在 git 历史中找回。
-- 若将来恢复评论，需要先确定新的后端（GitHub Pages 本身不能承载），
-  再把 `enabled` 改回 `true`、`api` 改成后端绝对地址，并恢复审核入口。
+- **审核**：在 GitHub Discussions 中对具体讨论执行隐藏、删除、锁定；giscus App 需要该仓库的
+  Discussions 读写权限。
+- **单篇关闭**：文章 front matter 写 `comments: false`。
+- **全站关闭**：`hugo.toml` → `[params.comments] enabled = false`，push 后评论区消失。
+- **读者门槛**：阅读无需登录，发表评论必须登录 GitHub。
+- **备份/导出**：Discussions 属于仓库数据，随仓库迁移；需要单独导出时用 GitHub API 拉取讨论与评论。
+- **改分类**：`hugo.toml` 的 `category` 与 `category_id` 必须同时改，否则讨论会挂到错误分类。
 
 ## 每月例行（NFR-011 / NFR-008）
 
 - [ ] 抽查首页、文章页、归档页、sitemap 返回 200
 - [ ] 核对 Actions 本月运行次数与失败记录
+- [ ] 抽查文章页评论区能否正常加载（`giscus.app/client.js` 200）
+- [ ] 清理 Discussions 中的垃圾评论
 - [ ] 把仓库内容同步一份到本地/网盘（NFR-001 双份备份）
 
 ## 迁移演练（M3，NFR-008）
