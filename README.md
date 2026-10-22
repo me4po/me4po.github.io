@@ -21,6 +21,7 @@ blog/
 ├── themes/terminal/           自制主题（极客 / 神秘 / 终端）
 │   ├── assets/css/main.css
 │   └── layouts/
+├── layouts/_default/rss.xml   自定义 RSS 输出（覆盖 Hugo 内置模板，见「RSS 订阅」）
 ├── .github/workflows/hugo.yml GitHub Actions：Hugo 构建 + Pages 部署
 ├── docs/OPS.md                运维手册（SOP）
 └── docs/DEPLOY.md             部署手册（含一次性配置与踩坑记录）
@@ -52,11 +53,41 @@ blog/
 - 首次启用（需在 GitHub 网页完成）：仓库 Settings → 勾选 **Discussions** → 安装
   [giscus App](https://github.com/apps/giscus) → 在 <https://giscus.app> 取 `category_id` 填入配置
 
+## RSS 订阅
+
+RSS 由 Hugo 生成，模板在 `layouts/_default/rss.xml`（覆盖内置模板），零依赖、零构建成本。
+
+订阅地址（两个内容完全一致，随便用哪个）：
+
+- <https://me4po.github.io/index.xml> —— 全站
+- <https://me4po.github.io/posts/index.xml> —— 仅文章
+
+相对内置模板改了什么：
+
+- **只收文章**：`about` / `archives` 这类单页不进 feed，订阅它不会收到"关于页改版了"
+- **输出全文**而不是摘要，订阅者不用点进站就能读完
+- **站内相对路径自动补成绝对地址**：markdown 里写 `![](/images/x.png)` 或 `[归档](/archives/)`，
+  在阅读器里会变成完整 URL，不会出现裂图和死链（Hugo 默认不改写这些路径）
+- 补了 `<author>` / `<category>` / `<lastBuildDate>`；`pinned: true` 的置顶文章排在最前
+
+常用调整：
+
+| 想做什么 | 改哪里 |
+| --- | --- |
+| 改 feed 条数 | `hugo.toml` 的 `[services.rss] limit`（当前 20） |
+| 让某篇文章不进 feed | 该文加 `draft: true`，或暂时移出 `content/posts/` |
+| 加频道封面图（部分阅读器显示的图标） | 放一张 **PNG/JPEG** 到 `static/images/`，再在 `hugo.toml` 加 `images = ["/images/cover.png"]`。SVG 阅读器不认，别用 favicon.svg |
+| 改回只输出摘要 | 删掉模板里的 `<content:encoded>` 行，`<description>` 换成 `.Summary` |
+| 新增文章分节 | 模板里 `where $pages "Section" "posts"` 要把新分节一并列进去，否则不进 feed |
+
+本地验证：`hugo147 --minify` 后直接看 `public/index.xml`。
+push 后 GitHub Pages 走 Fastly CDN，几分钟内读到的可能还是旧 feed。
+
 ## 本地开发与验证
 
 ```bash
 hugo server          # 日常写作预览 http://localhost:1313（brew 的 0.168.0）
-hugo147 --minify     # 发布前验证：与 Actions 同版本，期望 15 页且无 WARN/ERROR
+hugo147 --minify     # 发布前验证：与 Actions 同版本，期望 16 页且无 WARN/ERROR
 ```
 
 > **两个 hugo 并存是有意为之**：`.github/workflows/hugo.yml` 固定使用 **0.147.7**，

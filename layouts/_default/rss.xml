@@ -1,0 +1,102 @@
+{{- /*
+  L3 · 自定义 RSS 输出（覆盖 Hugo 内置的 embedded rss 模板）
+  ------------------------------------------------------------------
+  放在 layouts/_default/rss.xml，对**所有** RSS 输出生效：
+  /index.xml（全站）、/posts/index.xml（文章）、/tags/<tag>/index.xml（标签）。
+
+  相对内置模板改了什么：
+    L3-1  只收 content/posts/ 下的文章 —— about / archives 这类单页不进 feed，
+           订阅它不会收到"关于页改版了"这种噪音
+    L3-2  输出全文（.Content）而不是摘要（.Summary），订阅者不用点进站就能读完
+    L3-3  把 /images/x.png、/posts/x/ 这类站内相对路径补成绝对地址。
+           Hugo 不会自动改写 markdown 里的图片路径，不补的话阅读器里全是裂图、
+           站内链接也点不开
+    L3-4  补 <author> / <category> / <lastBuildDate> / 频道 <image>
+    L3-5  置顶优先：front matter 写 pinned: true 的文章排在最前，
+           两组内部仍按日期倒序（pinned 目前没用到，属于预留能力）
+
+  条数上限读 hugo.toml 的 [services.rss] limit，改那里就行，不用动这个文件。
+
+  ⚠️ 维护提醒：全文输出意味着 feed 体积随文章线性增长。如果以后单篇经常超过
+  50KB，把下面的 <content:encoded> 那行删掉、<description> 改回 .Summary，
+  否则部分阅读器会截断超长条目。
+*/ -}}
+
+{{- $pctx := . -}}
+{{- if .IsHome -}}{{ $pctx = .Site -}}{{- end -}}
+
+{{- $pages := slice -}}
+{{- if or $.IsHome $.IsSection -}}
+  {{- $pages = $pctx.RegularPages -}}
+{{- else -}}
+  {{- $pages = $pctx.Pages -}}
+{{- end -}}
+
+{{- /* L3-1：只保留 posts 分节。将来若新增别的文章分节，这里要一并列进去 */ -}}
+{{- $pages = where $pages "Section" "posts" -}}
+
+{{- /* L3-5：置顶提前。写法与主题 index.html / list.html 保持一致；
+           "!=" 对未设置 pinned 的页面同样成立（nil != true）*/ -}}
+{{- $pinned := where $pages "Params.pinned" true -}}
+{{- $rest := where $pages "Params.pinned" "!=" true -}}
+{{- $pages = slice -}}
+{{- range $pinned }}{{ $pages = $pages | append . }}{{ end -}}
+{{- range $rest }}{{ $pages = $pages | append . }}{{ end -}}
+
+{{- $limit := .Site.Config.Services.RSS.Limit -}}
+{{- if ge $limit 1 -}}{{- $pages = $pages | first $limit -}}{{- end -}}
+
+{{- /* L3-3：baseURL 去掉尾斜杠，下面拼接时统一补一个 */ -}}
+{{- $base := strings.TrimSuffix "/" .Site.BaseURL -}}
+{{- $author := .Site.Params.author -}}
+
+{{- printf "<?xml version=\"1.0\" encoding=\"utf-8\" standalone=\"yes\"?>" | safeHTML }}
+<rss version="2.0"
+     xmlns:atom="http://www.w3.org/2005/Atom"
+     xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>{{ if .IsHome }}{{ .Site.Title }}{{ else }}{{ .Site.Title }} · {{ .Title }}{{ end }}</title>
+    <link>{{ .Permalink }}</link>
+    <description>{{ .Site.Params.description | transform.XMLEscape }}</description>
+    {{- /* 版本耦合：CI 锁死 Hugo 0.147.7，用 LanguageCode。
+           若将来升到 0.158+（需同时把 hugo.toml 改成 locale），这里要换成 .Site.Language.Locale */ -}}
+    <language>{{ .Site.Language.LanguageCode }}</language>
+    <generator>Hugo</generator>
+    {{- with $pages }}
+    {{- /* Lastmod 在未开 enableGitInfo 时回落到 Date，与 pubDate 一致 */ -}}
+    <lastBuildDate>{{ (index . 0).Lastmod.Format "Mon, 02 Jan 2006 15:04:05 -0700" | safeHTML }}</lastBuildDate>
+    {{- end }}
+    {{- /* L3-4：频道封面图。需在 hugo.toml 配 params.images = ["/images/cover.png"]，
+           且文件必须是 PNG/JPEG（RSS 阅读器普遍不认 SVG）*/ -}}
+    {{- with .Site.Params.images }}
+    <image>
+      <url>{{ index . 0 | absURL }}</url>
+      <title>{{ $.Site.Title }}</title>
+      <link>{{ $.Permalink }}</link>
+    </image>
+    {{- end }}
+    {{- with .OutputFormats.Get "RSS" }}
+    {{- printf "<atom:link href=%q rel=\"self\" type=%q />" .Permalink "application/rss+xml" | safeHTML }}
+    {{- end }}
+    {{- range $pages }}
+    {{- /* L3-3：只补以 / 开头的站内路径；http(s):// 、 // 、 # 、 mailto: 不受影响。
+           注意替换串末尾必须补回被正则吃掉的闭合引号 */ -}}
+    {{- $content := replaceRE `(src|href)="/([^"]*)"` (printf `$1="%s/$2"` $base) .Content -}}
+    {{- /* 代码高亮的行号（hugo.toml 里 lineNos = true）在阅读器里会变成正文前缀的
+           "1 2 3"——阅读器不加载 CSS，<span class="ln"> 的文本会直接显示，故剥掉 */ -}}
+    {{- $content = replaceRE `<span class="ln">\s*\d+\s*</span>` "" $content -}}
+    <item>
+      <title>{{ .Title | transform.XMLEscape }}</title>
+      <link>{{ .Permalink }}</link>
+      <pubDate>{{ .Date.Format "Mon, 02 Jan 2006 15:04:05 -0700" | safeHTML }}</pubDate>
+      {{- with .Params.author | default $author }}
+      <author>{{ . | transform.XMLEscape }}</author>
+      {{- end }}
+      <guid isPermaLink="true">{{ .Permalink }}</guid>
+      {{- range .Params.tags }}<category>{{ . | transform.XMLEscape }}</category>{{ end }}
+      <description>{{ $content | transform.XMLEscape | safeHTML }}</description>
+      <content:encoded>{{ $content | transform.XMLEscape | safeHTML }}</content:encoded>
+    </item>
+    {{- end }}
+  </channel>
+</rss>

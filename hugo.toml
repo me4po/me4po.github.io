@@ -17,6 +17,14 @@ enableGitInfo = false
 # 其 publishDate 是 2026-10-21T00:00:00Z，在 UTC 下仍属"未来"，Hugo 默认会跳过不产出。
 # 本站不做定时发布，故全局开启 buildFuture，避免"文章推上去了页面却没有"的诡异现象。
 buildFuture = true
+# 日期只写到日（如 date: 2026-10-21）时，按北京时间解释；
+# 不加这行 Hugo 按 UTC 解释，feed 的 pubDate 会显示 +0000，比实际晚 8 小时。
+timeZone = "Asia/Shanghai"
+
+# RSS 只保留最近 N 篇。 layouts/_default/rss.xml 会读这个值（L3）。
+# 想改条数改这里，不用动模板。
+[services.rss]
+  limit = 20
 
 [params]
   author = "站长"

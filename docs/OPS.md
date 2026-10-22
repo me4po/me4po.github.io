@@ -103,12 +103,15 @@ hugo147 --minify     # 与 Actions 同版本；应无 WARN/ERROR
 - [ ] 抽查首页、文章页、归档页、sitemap 返回 200
 - [ ] 核对 Actions 本月运行次数与失败记录
 - [ ] 抽查文章页评论区能否正常加载（`giscus.app/client.js` 200）
+- [ ] 抽查 RSS：`curl -s https://me4po.github.io/index.xml` 是合法 XML、条目数与文章数一致、
+      且不含 `about` / `archives`（模板在 `layouts/_default/rss.xml`）
 - [ ] 清理 Discussions 中的垃圾评论
 - [ ] 把仓库内容同步一份到本地/网盘（NFR-001 双份备份）
 
 ## 迁移演练（M3，NFR-008）
 
-1. 仓库整体打包（含 `content/`、`static/`、`themes/`、`hugo.toml`、`.github/`）
+1. 仓库整体打包（含 `content/`、`static/`、`themes/`、`layouts/`、`hugo.toml`、`.github/`）
+   —— **`layouts/` 别漏**，里面放着自定义 RSS 模板，漏了 feed 会静默退回内置模板（变回只有摘要、混入单页）
 2. 在新账号或新平台建仓库，放回文件
 3. 重新开启 Pages（或等价静态托管），确认构建与页面
 4. 计时，目标 ≤ 1 天
